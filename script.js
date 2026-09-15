@@ -937,15 +937,15 @@ function renderTrueFalse(question, container) {
       );
 
 
-    const input =
-      document.createElement('radio');
+    const input = document.createElement('input');
 
-    /*
-     * Fallback aman jika browser tidak mengenali
-     * custom element di atas.
-     */
-    input =
-      document.createElement('input');
+   input.type = 'radio';
+
+   input.name = `question-${question.no}`;
+
+   input.value = option.value;
+
+   input.checked = currentAnswer === option.value;
 
     input.type = 'radio';
 
