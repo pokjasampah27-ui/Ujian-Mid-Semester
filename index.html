@@ -11,7 +11,7 @@
 
   <meta
     name="theme-color"
-    content="#2e7d32"
+    content="#176b4d"
   >
 
   <meta
@@ -19,11 +19,10 @@
     content="Aplikasi Ujian Online Bahasa Indonesia"
   >
 
-  <title>Ujian Bahasa Indonesia</title>
+  <title>
+    Ujian Bahasa Indonesia
+  </title>
 
-  <!-- =========================================================
-       FONT
-       ========================================================= -->
   <link
     rel="preconnect"
     href="https://fonts.googleapis.com"
@@ -36,13 +35,10 @@
   >
 
   <link
-    href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
     rel="stylesheet"
   >
 
-  <!-- =========================================================
-       CSS
-       ========================================================= -->
   <link
     rel="stylesheet"
     href="style.css"
@@ -51,1320 +47,1432 @@
 
 <body>
 
-  <!-- =========================================================
+  <!-- ============================================================
        BACKGROUND DECORATION
-       ========================================================= -->
+       ============================================================ -->
 
-  <div class="background-decoration" aria-hidden="true">
-
+  <div class="background-decoration">
     <span class="bubble bubble-1"></span>
     <span class="bubble bubble-2"></span>
     <span class="bubble bubble-3"></span>
-
-    <span class="leaf leaf-1">🍃</span>
-    <span class="leaf leaf-2">🌿</span>
-    <span class="leaf leaf-3">🍀</span>
-
+    <span class="bubble bubble-4"></span>
   </div>
 
 
-  <!-- =========================================================
-       APP CONTAINER
-       ========================================================= -->
+  <!-- ============================================================
+       APP
+       ============================================================ -->
 
-  <main id="app" class="app-container">
+  <div id="app" class="app-shell">
 
+    <!-- ==========================================================
+         HEADER
+         ========================================================== -->
 
-    <!-- =======================================================
-         SCREEN: LOADING
-         ======================================================= -->
+    <header class="main-header">
 
-    <section
-      id="loadingScreen"
-      class="screen loading-screen active"
-      aria-label="Memuat aplikasi"
-    >
+      <div class="header-inner">
 
-      <div class="loading-card">
-
-        <div class="loading-icon">
-          📚
-        </div>
-
-        <h1>
-          Ujian Bahasa Indonesia
-        </h1>
-
-        <p id="loadingText">
-          Menyiapkan soal ujian...
-        </p>
-
-        <div class="loading-spinner"></div>
-
-      </div>
-
-    </section>
-
-
-    <!-- =======================================================
-         SCREEN: START / IDENTITAS
-         ======================================================= -->
-
-    <section
-      id="startScreen"
-      class="screen start-screen"
-      aria-label="Identitas peserta"
-      hidden
-    >
-
-      <div class="start-card">
-
-        <!-- Header -->
-
-        <div class="exam-logo">
-          <div class="exam-logo-icon">
-            📖
-          </div>
-
-          <div>
-            <span class="eyebrow">
-              SISTEM UJIAN ONLINE
-            </span>
-
-            <h1>
-              Bahasa Indonesia
-            </h1>
-          </div>
-        </div>
-
-
-        <!-- Welcome -->
-
-        <div class="welcome-box">
-
-          <div class="welcome-emoji">
-            🎯
-          </div>
-
-          <div>
-            <h2>
-              Siap untuk menguji kemampuanmu?
-            </h2>
-
-            <p>
-              Bacalah setiap soal dengan teliti
-              sebelum memilih jawaban.
-            </p>
-          </div>
-
-        </div>
-
-
-        <!-- Information -->
-
-        <div class="exam-info-grid">
-
-          <div class="info-card">
-            <span class="info-icon">📝</span>
-
-            <div>
-              <small>
-                Jumlah Soal
-              </small>
-
-              <strong id="totalQuestionInfo">
-                40
-              </strong>
-            </div>
-          </div>
-
-
-          <div class="info-card">
-            <span class="info-icon">🎓</span>
-
-            <div>
-              <small>
-                Mata Pelajaran
-              </small>
-
-              <strong>
-                Bahasa Indonesia
-              </strong>
-            </div>
-          </div>
-
-
-          <div class="info-card">
-            <span class="info-icon">📋</span>
-
-            <div>
-              <small>
-                Bentuk Soal
-              </small>
-
-              <strong>
-                PG • PGK • B/S
-              </strong>
-            </div>
-          </div>
-
-        </div>
-
-
-        <!-- Identity Form -->
-
-        <form
-          id="identityForm"
-          class="identity-form"
-          novalidate
+        <button
+          type="button"
+          class="brand"
+          data-action="home"
+          aria-label="Beranda"
         >
-
-          <div class="form-section-title">
-            <span>👤</span>
-
-            <div>
-              <h3>
-                Identitas Peserta
-              </h3>
-
-              <p>
-                Isi data dengan benar sebelum memulai.
-              </p>
-            </div>
-          </div>
-
-
-          <!-- Nama -->
-
-          <div class="form-group">
-
-            <label
-              for="studentName"
-            >
-              Nama Lengkap
-            </label>
-
-            <div class="input-wrapper">
-
-              <span class="input-icon">
-                👤
-              </span>
-
-              <input
-                type="text"
-                id="studentName"
-                name="nama"
-                autocomplete="name"
-                maxlength="150"
-                placeholder="Masukkan nama lengkap"
-                required
-              >
-
-            </div>
-
-            <small
-              id="nameError"
-              class="form-error"
-            ></small>
-
-          </div>
-
-
-          <!-- Kelas -->
-
-          <div class="form-group">
-
-            <label
-              for="studentClass"
-            >
-              Kelas
-            </label>
-
-            <div class="input-wrapper">
-
-              <span class="input-icon">
-                🏫
-              </span>
-
-              <select
-                id="studentClass"
-                name="kelas"
-                required
-              >
-
-                <option
-                  value=""
-                  selected
-                  disabled
-                >
-                  Pilih kelas
-                </option>
-
-                <option value="12 M1">
-                  12 M1
-                </option>
-
-                <option value="12 M2">
-                  12 M2
-                </option>
-
-                <option value="12 M3">
-                  12 M3
-                </option>
-
-                <option value="12 M4">
-                  12 M4
-                </option>
-
-                <option value="12 M5">
-                  12 M5
-                </option>
-
-              </select>
-
-            </div>
-
-            <small
-              id="classError"
-              class="form-error"
-            ></small>
-
-          </div>
-
-
-          <!-- Tanggal -->
-
-          <div class="form-group">
-
-            <label
-              for="examDate"
-            >
-              Tanggal Ujian
-            </label>
-
-            <div class="input-wrapper">
-
-              <span class="input-icon">
-                📅
-              </span>
-
-              <input
-                type="date"
-                id="examDate"
-                name="tanggal"
-                required
-              >
-
-            </div>
-
-            <small
-              id="dateError"
-              class="form-error"
-            ></small>
-
-          </div>
-
-
-          <!-- Agreement -->
-
-          <label
-            class="agreement-check"
-            for="agreement"
-          >
-
-            <input
-              type="checkbox"
-              id="agreement"
-              name="agreement"
-            >
-
-            <span class="custom-checkbox">
-              ✓
-            </span>
-
-            <span class="agreement-text">
-              Saya telah mengisi identitas dengan benar
-              dan siap mengerjakan ujian.
-            </span>
-
-          </label>
-
-
-          <!-- Start button -->
-
-          <button
-            type="submit"
-            id="startExamButton"
-            class="btn btn-primary btn-large"
-          >
-
-            <span>
-              🚀
-            </span>
-
-            <span>
-              MULAI UJIAN
-            </span>
-
-            <span>
-              →
-            </span>
-
-          </button>
-
-        </form>
-
-
-        <!-- Notice -->
-
-        <div class="start-notice">
-
-          <span>
-            💡
+          <span class="brand-icon">
+            📚
           </span>
 
-          <p>
-            Pastikan koneksi internet stabil.
-            Jangan menutup halaman sebelum jawaban
-            berhasil dikirim.
-          </p>
+          <span class="brand-text">
+            <strong>
+              Ujian Bahasa Indonesia
+            </strong>
 
+            <small>
+              Evaluasi Pembelajaran Digital
+            </small>
+          </span>
+        </button>
+
+
+        <div
+          id="connectionStatus"
+          class="connection-status"
+          data-status="checking"
+        >
+          <span class="connection-dot">
+            ●
+          </span>
+
+          <span class="connection-label">
+            Menghubungkan...
+          </span>
         </div>
 
       </div>
 
-    </section>
+    </header>
 
 
-    <!-- =======================================================
-         SCREEN: EXAM
-         ======================================================= -->
+    <!-- ==========================================================
+         MAIN
+         ========================================================== -->
 
-    <section
-      id="examScreen"
-      class="screen exam-screen"
-      aria-label="Halaman ujian"
-      hidden
-    >
-
-      <!-- =====================================================
-           TOP BAR
-           ===================================================== -->
-
-      <header class="exam-header">
-
-        <div class="exam-header-left">
-
-          <div class="mini-logo">
-            📖
-          </div>
-
-          <div>
-
-            <span class="exam-header-label">
-              UJIAN BAHASA INDONESIA
-            </span>
-
-            <strong
-              id="headerStudentName"
-            >
-              Peserta
-            </strong>
-
-          </div>
-
-        </div>
+    <main class="main-content">
 
 
-        <div class="exam-header-center">
+      <!-- ========================================================
+           LANDING
+           ======================================================== -->
 
-          <div class="progress-label">
+      <section
+        id="landingView"
+        class="view active-view"
+      >
 
-            <span>
-              Progress
-            </span>
+        <div class="hero-section">
 
-            <strong
-              id="progressText"
-            >
-              0 / 40
-            </strong>
+          <div class="hero-content">
 
-          </div>
-
-          <div class="progress-track">
-
-            <div
-              id="progressBar"
-              class="progress-bar"
-              style="width: 0%;"
-            ></div>
-
-          </div>
-
-        </div>
-
-
-        <div class="exam-header-right">
-
-          <div class="class-badge">
-            🏫
-            <span id="headerStudentClass">
-              -
-            </span>
-          </div>
-
-        </div>
-
-      </header>
-
-
-      <!-- =====================================================
-           EXAM BODY
-           ===================================================== -->
-
-      <div class="exam-layout">
-
-
-        <!-- ===================================================
-             SIDEBAR NAVIGATION
-             =================================================== -->
-
-        <aside
-          id="questionSidebar"
-          class="question-sidebar"
-        >
-
-          <div class="sidebar-header">
-
-            <div>
-
-              <span class="sidebar-label">
-                NAVIGASI SOAL
-              </span>
-
-              <h2>
-                Nomor Soal
-              </h2>
-
+            <div class="hero-badge">
+              ✨ PLATFORM UJIAN DIGITAL
             </div>
 
-            <button
-              type="button"
-              id="closeSidebarButton"
-              class="sidebar-close"
-              aria-label="Tutup navigasi soal"
-            >
-              ×
-            </button>
-
-          </div>
-
-
-          <!-- Legend -->
-
-          <div class="question-legend">
-
-            <div class="legend-item">
-
-              <span class="legend-dot unanswered">
-              </span>
-
+            <h1>
+              Saatnya Tunjukkan
               <span>
-                Belum dijawab
+                Kemampuanmu!
               </span>
+            </h1>
 
-            </div>
-
-
-            <div class="legend-item">
-
-              <span class="legend-dot answered">
-              </span>
-
-              <span>
-                Sudah dijawab
-              </span>
-
-            </div>
+            <p class="hero-description">
+              Kerjakan ujian Bahasa Indonesia
+              dengan tenang, teliti, dan percaya diri.
+              Semua jawaban akan diperiksa secara
+              otomatis.
+            </p>
 
 
-            <div class="legend-item">
+            <div class="hero-actions">
 
-              <span class="legend-dot current">
-              </span>
-
-              <span>
-                Sedang dibuka
-              </span>
-
-            </div>
-
-          </div>
-
-
-          <!-- Question numbers -->
-
-          <div
-            id="questionNumbers"
-            class="question-numbers"
-          >
-            <!-- Dibuat oleh script.js -->
-          </div>
-
-
-          <!-- Sidebar footer -->
-
-          <div class="sidebar-footer">
-
-            <div class="answered-summary">
-
-              <span>
-                Terjawab
-              </span>
-
-              <strong
-                id="answeredCount"
+              <button
+                type="button"
+                id="startStudentBtn"
+                class="btn btn-primary btn-large"
               >
-                0 / 40
-              </strong>
+                <span>🚀</span>
+                Mulai Ujian
+              </button>
 
-            </div>
-
-          </div>
-
-        </aside>
-
-
-        <!-- Overlay mobile -->
-
-        <div
-          id="sidebarOverlay"
-          class="sidebar-overlay"
-          hidden
-        ></div>
-
-
-        <!-- ===================================================
-             MAIN QUESTION AREA
-             =================================================== -->
-
-        <section class="exam-content">
-
-          <!-- Mobile toolbar -->
-
-          <div class="mobile-exam-toolbar">
-
-            <button
-              type="button"
-              id="openSidebarButton"
-              class="mobile-menu-button"
-              aria-label="Buka navigasi soal"
-            >
-              ☰
-            </button>
-
-            <div class="mobile-question-position">
-
-              <span>
-                Soal
-              </span>
-
-              <strong id="mobileQuestionNumber">
-                1
-              </strong>
-
-              <span>
-                / 40
-              </span>
-
-            </div>
-
-          </div>
-
-
-          <!-- Question card -->
-
-          <article
-            id="questionCard"
-            class="question-card"
-          >
-
-            <!-- Question top -->
-
-            <div class="question-top">
-
-              <div class="question-number-badge">
-
-                <span>
-                  SOAL
-                </span>
-
-                <strong
-                  id="questionNumber"
-                >
-                  1
-                </strong>
-
-              </div>
-
-
-              <div class="question-type-badge">
-                <span
-                  id="questionType"
-                >
-                  PG
-                </span>
-              </div>
-
-            </div>
-
-
-            <!-- Stimulus -->
-
-            <div
-              id="questionStimulus"
-              class="question-stimulus"
-              hidden
-            >
-              <!-- Stimulus dibuat oleh script.js -->
-            </div>
-
-
-            <!-- Question -->
-
-            <div
-              id="questionText"
-              class="question-text"
-            >
-              Memuat soal...
-            </div>
-
-
-            <!-- Answer instruction -->
-
-            <div
-              id="answerInstruction"
-              class="answer-instruction"
-            >
-              Pilih salah satu jawaban yang paling tepat.
-            </div>
-
-
-            <!-- Options -->
-
-            <div
-              id="answerOptions"
-              class="answer-options"
-            >
-              <!-- Pilihan dibuat oleh script.js -->
-            </div>
-
-
-            <!-- Question footer -->
-
-            <div class="question-footer">
-
-              <div
-                id="questionStatus"
-                class="question-status"
+              <button
+                type="button"
+                id="adminBtn"
+                class="btn btn-secondary btn-large"
               >
-                Belum dijawab
+                <span>🔐</span>
+                Admin
+              </button>
+
+            </div>
+
+
+            <div class="hero-info">
+
+              <div class="info-pill">
+                <span>📝</span>
+                <strong>40</strong>
+                <small>Soal</small>
               </div>
 
-              <div class="question-footer-actions">
+              <div class="info-pill">
+                <span>🎯</span>
+                <strong>3</strong>
+                <small>Bentuk Soal</small>
+              </div>
 
-                <button
-                  type="button"
-                  id="prevQuestionButton"
-                  class="btn btn-secondary"
-                >
-                  <span>←</span>
-                  <span>Sebelumnya</span>
-                </button>
+              <div class="info-pill">
+                <span>🏫</span>
+                <strong>5</strong>
+                <small>Kelas</small>
+              </div>
+
+            </div>
+
+          </div>
 
 
-                <button
-                  type="button"
-                  id="nextQuestionButton"
-                  class="btn btn-primary"
-                >
-                  <span>Berikutnya</span>
-                  <span>→</span>
-                </button>
+          <div class="hero-illustration">
+
+            <div class="illustration-card">
+
+              <div class="floating-book">
+                📖
+              </div>
+
+              <div class="floating-pencil">
+                ✏️
+              </div>
+
+              <div class="floating-star star-1">
+                ✦
+              </div>
+
+              <div class="floating-star star-2">
+                ✦
+              </div>
+
+              <div class="exam-paper">
+
+                <div class="paper-top">
+                  <span>
+                    UJIAN
+                  </span>
+
+                  <span>
+                    B. INDONESIA
+                  </span>
+                </div>
+
+                <div class="paper-line long"></div>
+                <div class="paper-line"></div>
+                <div class="paper-line medium"></div>
+
+                <div class="paper-options">
+                  <span>◉ A</span>
+                  <span>○ B</span>
+                  <span>○ C</span>
+                  <span>○ D</span>
+                </div>
+
+                <div class="paper-check">
+                  ✓
+                </div>
 
               </div>
 
             </div>
 
+          </div>
+
+        </div>
+
+
+        <div class="feature-grid">
+
+          <article class="feature-card feature-green">
+            <span class="feature-icon">
+              🎯
+            </span>
+
+            <h3>
+              Fokus pada Soal
+            </h3>
+
+            <p>
+              Kerjakan setiap soal dengan
+              teliti dan jangan terburu-buru.
+            </p>
           </article>
 
 
-          <!-- =================================================
-               SUBMIT AREA
-               ================================================= -->
+          <article class="feature-card feature-blue">
+            <span class="feature-icon">
+              💡
+            </span>
 
-          <div
-            id="submitArea"
-            class="submit-area"
+            <h3>
+              Beragam Bentuk
+            </h3>
+
+            <p>
+              Tersedia pilihan ganda,
+              pilihan ganda kompleks,
+              dan benar/salah.
+            </p>
+          </article>
+
+
+          <article class="feature-card feature-yellow">
+            <span class="feature-icon">
+              🏆
+            </span>
+
+            <h3>
+              Hasil Otomatis
+            </h3>
+
+            <p>
+              Nilai dihitung otomatis
+              setelah ujian dikirim.
+            </p>
+          </article>
+
+        </div>
+
+      </section>
+
+
+      <!-- ========================================================
+           STUDENT FORM
+           ======================================================== -->
+
+      <section
+        id="studentView"
+        class="view hidden"
+      >
+
+        <div class="form-page">
+
+          <button
+            type="button"
+            class="back-button"
+            data-action="home"
           >
+            ← Kembali ke Beranda
+          </button>
 
-            <div class="submit-warning">
 
-              <span class="submit-warning-icon">
-                ⚠️
-              </span>
+          <div class="form-card">
+
+            <div class="form-card-header">
+
+              <div class="form-icon">
+                🎓
+              </div>
 
               <div>
+                <span class="eyebrow">
+                  DATA PESERTA
+                </span>
 
-                <strong>
-                  Sudah selesai mengerjakan?
-                </strong>
+                <h2>
+                  Siapkan Ujianmu
+                </h2>
 
                 <p>
-                  Pastikan semua soal sudah diperiksa
-                  sebelum mengirim jawaban.
+                  Isi data berikut sebelum
+                  memulai ujian.
                 </p>
-
               </div>
 
             </div>
 
 
-            <button
-              type="button"
-              id="submitExamButton"
-              class="btn btn-submit"
-            >
+            <form id="studentForm">
 
-              <span>
-                📤
-              </span>
+              <div class="form-group">
 
-              <span>
-                KIRIM JAWABAN
-              </span>
+                <label for="studentName">
+                  Nama Lengkap
+                </label>
 
-            </button>
+                <div class="input-wrapper">
+                  <span class="input-icon">
+                    👤
+                  </span>
+
+                  <input
+                    type="text"
+                    id="studentName"
+                    name="studentName"
+                    maxlength="150"
+                    autocomplete="name"
+                    placeholder="Masukkan nama lengkap"
+                    required
+                  >
+                </div>
+
+              </div>
+
+
+              <div class="form-group">
+
+                <label for="studentClass">
+                  Kelas
+                </label>
+
+                <div class="input-wrapper">
+                  <span class="input-icon">
+                    🏫
+                  </span>
+
+                  <select
+                    id="studentClass"
+                    name="studentClass"
+                    required
+                  >
+                    <option value="">
+                      Pilih kelas
+                    </option>
+                  </select>
+                </div>
+
+              </div>
+
+
+              <div class="form-group">
+
+                <label for="examDate">
+                  Tanggal Ujian
+                </label>
+
+                <div class="input-wrapper">
+                  <span class="input-icon">
+                    📅
+                  </span>
+
+                  <input
+                    type="date"
+                    id="examDate"
+                    name="examDate"
+                    required
+                  >
+                </div>
+
+              </div>
+
+
+              <div class="exam-rules">
+
+                <div class="rules-title">
+                  📌 Perhatikan sebelum mulai
+                </div>
+
+                <ul>
+                  <li>
+                    Pastikan nama dan kelas
+                    sudah benar.
+                  </li>
+
+                  <li>
+                    Ujian terdiri dari
+                    40 soal.
+                  </li>
+
+                  <li>
+                    Bacalah setiap soal
+                    dengan teliti.
+                  </li>
+
+                  <li>
+                    Setelah dikirim,
+                    jawaban tidak dapat diubah.
+                  </li>
+                </ul>
+
+              </div>
+
+
+              <button
+                type="submit"
+                class="btn btn-primary btn-full btn-large"
+              >
+                Mulai Mengerjakan
+                <span>→</span>
+              </button>
+
+            </form>
 
           </div>
 
-        </section>
-
-      </div>
-
-    </section>
-
-
-    <!-- =======================================================
-         SCREEN: SUBMITTING
-         ======================================================= -->
-
-    <section
-      id="submittingScreen"
-      class="screen submitting-screen"
-      hidden
-    >
-
-      <div class="submitting-card">
-
-        <div class="submitting-animation">
-          📤
         </div>
 
-        <h1>
-          Mengirim Jawaban...
-        </h1>
-
-        <p>
-          Mohon jangan menutup halaman ini.
-        </p>
-
-        <div class="upload-progress">
-
-          <div
-            id="uploadProgressBar"
-            class="upload-progress-bar"
-          ></div>
-
-        </div>
-
-        <small id="submitStatusText">
-          Menyimpan jawaban ke server...
-        </small>
-
-      </div>
-
-    </section>
+      </section>
 
 
-    <!-- =======================================================
-         SCREEN: RESULT
-         ======================================================= -->
+      <!-- ========================================================
+           EXAM
+           ======================================================== -->
 
-    <section
-      id="resultScreen"
-      class="screen result-screen"
-      aria-label="Hasil ujian"
-      hidden
-    >
+      <section
+        id="examView"
+        class="view hidden"
+      >
 
-      <div class="result-card">
+        <div id="examTop"></div>
 
-        <!-- Result icon -->
+        <div class="exam-layout">
 
-        <div
-          id="resultIcon"
-          class="result-icon"
-        >
-          🎉
-        </div>
+          <!-- SIDEBAR -->
+
+          <aside class="exam-sidebar">
+
+            <div class="student-mini-card">
+
+              <div class="student-avatar">
+                👨‍🎓
+              </div>
+
+              <div>
+                <small>
+                  Peserta
+                </small>
+
+                <strong id="examStudentName">
+                  -
+                </strong>
+
+                <span id="examStudentClass">
+                  -
+                </span>
+              </div>
+
+            </div>
 
 
-        <span class="result-eyebrow">
-          UJIAN SELESAI
-        </span>
+            <div class="progress-card">
+
+              <div class="progress-heading">
+                <span>
+                  Progress
+                </span>
+
+                <strong id="questionProgress">
+                  0 / 40 dijawab
+                </strong>
+              </div>
+
+              <div class="progress-track">
+                <div
+                  id="progressBar"
+                  class="progress-fill"
+                  style="width:0%"
+                ></div>
+              </div>
+
+            </div>
 
 
-        <h1>
-          Jawaban Berhasil Dikirim!
-        </h1>
+            <div class="question-map-card">
+
+              <div class="section-heading">
+                <h3>
+                  Nomor Soal
+                </h3>
+
+                <span>
+                  Klik nomor untuk berpindah
+                </span>
+              </div>
+
+              <div
+                id="questionNav"
+                class="question-nav"
+              ></div>
 
 
-        <p class="result-message">
-          Terima kasih telah mengerjakan ujian
-          dengan sungguh-sungguh.
-        </p>
+              <div class="question-legend">
+
+                <div>
+                  <span class="legend-dot active"></span>
+                  Aktif
+                </div>
+
+                <div>
+                  <span class="legend-dot answered"></span>
+                  Dijawab
+                </div>
+
+                <div>
+                  <span class="legend-dot"></span>
+                  Belum
+                </div>
+
+              </div>
+
+            </div>
+
+          </aside>
 
 
-        <!-- Student -->
+          <!-- QUESTION -->
 
-        <div class="result-student">
+          <div class="exam-main">
 
-          <div class="result-avatar">
-            👤
+            <div class="exam-topbar">
+
+              <div>
+
+                <span class="eyebrow">
+                  UJIAN BAHASA INDONESIA
+                </span>
+
+                <div class="question-heading">
+
+                  <strong id="questionNumber">
+                    Soal 1
+                  </strong>
+
+                  <span
+                    id="questionType"
+                    class="question-type-badge"
+                  >
+                    Pilihan Ganda
+                  </span>
+
+                </div>
+
+              </div>
+
+              <div class="exam-date-label">
+                📅
+                <span id="examDateDisplay">
+                  Ujian
+                </span>
+              </div>
+
+            </div>
+
+
+            <div
+              id="questionContainer"
+              class="question-container"
+            ></div>
+
+
+            <div class="exam-navigation">
+
+              <button
+                type="button"
+                id="prevQuestion"
+                class="btn btn-secondary"
+              >
+                ← Sebelumnya
+              </button>
+
+
+              <button
+                type="button"
+                id="nextQuestion"
+                class="btn btn-primary"
+              >
+                Berikutnya →
+              </button>
+
+
+              <button
+                type="button"
+                id="submitExam"
+                class="btn btn-submit hidden"
+              >
+                ✓ Kirim Ujian
+              </button>
+
+            </div>
+
           </div>
 
-          <div>
+        </div>
+
+      </section>
+
+
+      <!-- ========================================================
+           RESULT
+           ======================================================== -->
+
+      <section
+        id="resultView"
+        class="view hidden"
+      >
+
+        <div class="result-page">
+
+          <div class="result-celebration">
+            🎉
+          </div>
+
+          <span
+            id="resultBadge"
+            class="result-badge"
+          >
+            ✓ Ujian selesai
+          </span>
+
+          <h1>
+            Ujian Berhasil Disimpan!
+          </h1>
+
+          <p>
+            Jawaban kamu telah diperiksa
+            secara otomatis.
+          </p>
+
+
+          <div class="result-score-card">
 
             <span>
-              Nama Peserta
+              NILAI AKHIR
             </span>
 
-            <strong
-              id="resultStudentName"
-            >
-              -
+            <strong id="resultScore">
+              0
             </strong>
 
-            <small
-              id="resultStudentClass"
-            >
-              -
+            <small>
+              dari 100
             </small>
 
           </div>
 
-        </div>
 
+          <div class="result-info-grid">
 
-        <!-- Score -->
+            <div class="result-info-card">
+              <small>
+                Nama
+              </small>
 
-        <div class="score-box">
+              <strong id="resultName">
+                -
+              </strong>
+            </div>
 
-          <span class="score-label">
-            NILAI
-          </span>
+            <div class="result-info-card">
+              <small>
+                Kelas
+              </small>
 
-          <strong
-            id="resultScore"
-            class="result-score"
-          >
-            0
-          </strong>
+              <strong id="resultClass">
+                -
+              </strong>
+            </div>
 
-          <span class="score-max">
-            / 100
-          </span>
-
-        </div>
-
-
-        <!-- Statistics -->
-
-        <div class="result-stat-grid">
-
-          <div class="result-stat correct">
-
-            <span>
-              ✓
-            </span>
-
-            <div>
-
+            <div class="result-info-card">
               <small>
                 Benar
               </small>
 
               <strong
                 id="resultCorrect"
+                class="text-success"
               >
                 0
               </strong>
-
             </div>
 
-          </div>
-
-
-          <div class="result-stat wrong">
-
-            <span>
-              ×
-            </span>
-
-            <div>
-
+            <div class="result-info-card">
               <small>
                 Salah
               </small>
 
               <strong
                 id="resultWrong"
+                class="text-danger"
               >
                 0
               </strong>
-
             </div>
 
           </div>
 
 
-          <div class="result-stat total">
+          <div class="exam-id-card">
 
-            <span>
-              📝
+            <div>
+              <span>
+                ID UJIAN
+              </span>
+
+              <strong id="resultId">
+                -
+              </strong>
+            </div>
+
+            <button
+              type="button"
+              class="copy-id-button"
+              onclick="copyExamId()"
+            >
+              📋 Salin
+            </button>
+
+          </div>
+
+
+          <div class="result-actions">
+
+            <button
+              type="button"
+              class="btn btn-primary btn-large"
+              data-action="home"
+            >
+              🏠 Kembali ke Beranda
+            </button>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- ========================================================
+           ADMIN LOGIN
+           ======================================================== -->
+
+      <section
+        id="adminLoginPanel"
+        class="view hidden"
+      >
+
+        <div class="admin-login-page">
+
+          <button
+            type="button"
+            class="back-button"
+            data-action="home"
+          >
+            ← Kembali
+          </button>
+
+
+          <div class="admin-login-card">
+
+            <div class="admin-lock">
+              🔐
+            </div>
+
+            <span class="eyebrow">
+              AREA ADMINISTRATOR
             </span>
+
+            <h2>
+              Login Admin
+            </h2>
+
+            <p>
+              Masukkan PIN Admin untuk
+              mengakses hasil ujian.
+            </p>
+
+
+            <form id="adminLoginForm">
+
+              <div class="form-group">
+
+                <label for="adminPin">
+                  PIN Admin
+                </label>
+
+                <div class="input-wrapper">
+                  <span class="input-icon">
+                    🔑
+                  </span>
+
+                  <input
+                    type="password"
+                    id="adminPin"
+                    name="adminPin"
+                    autocomplete="current-password"
+                    placeholder="Masukkan PIN Admin"
+                    required
+                  >
+                </div>
+
+              </div>
+
+
+              <button
+                type="submit"
+                class="btn btn-primary btn-full btn-large"
+              >
+                Masuk ke Dashboard
+                <span>→</span>
+              </button>
+
+            </form>
+
+
+            <div class="security-note">
+              🔒 PIN tidak disimpan di halaman
+              GitHub Pages.
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- ========================================================
+           ADMIN DASHBOARD
+           ======================================================== -->
+
+      <section
+        id="adminView"
+        class="view hidden"
+      >
+
+        <div class="admin-page">
+
+          <div class="admin-header">
 
             <div>
 
-              <small>
-                Total Soal
-              </small>
+              <span class="eyebrow">
+                ADMINISTRATOR
+              </span>
 
-              <strong
-                id="resultTotal"
+              <h1>
+                Dashboard Hasil Ujian
+              </h1>
+
+              <p>
+                Pantau hasil dan statistik
+                ujian Bahasa Indonesia.
+              </p>
+
+            </div>
+
+
+            <div class="admin-header-actions">
+
+              <button
+                type="button"
+                class="btn btn-secondary"
+                data-action="home"
               >
-                40
-              </strong>
+                🏠 Beranda
+              </button>
 
+              <button
+                type="button"
+                id="adminLogout"
+                class="btn btn-danger"
+              >
+                Keluar
+              </button>
+
+            </div>
+
+          </div>
+
+
+          <!-- STATISTICS -->
+
+          <div class="statistics-grid">
+
+            <article class="stat-card stat-total">
+
+              <span class="stat-icon">
+                👥
+              </span>
+
+              <div>
+                <small>
+                  Total Peserta
+                </small>
+
+                <strong id="adminTotal">
+                  0
+                </strong>
+              </div>
+
+            </article>
+
+
+            <article class="stat-card stat-average">
+
+              <span class="stat-icon">
+                📊
+              </span>
+
+              <div>
+                <small>
+                  Rata-rata
+                </small>
+
+                <strong id="adminAverage">
+                  0
+                </strong>
+              </div>
+
+            </article>
+
+
+            <article class="stat-card stat-highest">
+
+              <span class="stat-icon">
+                🏆
+              </span>
+
+              <div>
+                <small>
+                  Nilai Tertinggi
+                </small>
+
+                <strong id="adminHighest">
+                  0
+                </strong>
+              </div>
+
+            </article>
+
+
+            <article class="stat-card stat-lowest">
+
+              <span class="stat-icon">
+                📉
+              </span>
+
+              <div>
+                <small>
+                  Nilai Terendah
+                </small>
+
+                <strong id="adminLowest">
+                  0
+                </strong>
+              </div>
+
+            </article>
+
+          </div>
+
+
+          <!-- FILTER -->
+
+          <div class="admin-card">
+
+            <div class="card-title-row">
+
+              <div>
+                <h2>
+                  🔎 Filter Hasil
+                </h2>
+
+                <p>
+                  Gunakan filter untuk menemukan
+                  data tertentu.
+                </p>
+              </div>
+
+            </div>
+
+
+            <div class="filter-grid">
+
+              <div class="form-group">
+
+                <label for="filterClass">
+                  Kelas
+                </label>
+
+                <select id="filterClass">
+                  <option value="SEMUA">
+                    Semua kelas
+                  </option>
+                </select>
+
+              </div>
+
+
+              <div class="form-group">
+
+                <label for="filterDate">
+                  Tanggal
+                </label>
+
+                <input
+                  type="date"
+                  id="filterDate"
+                >
+
+              </div>
+
+
+              <div class="form-group">
+
+                <label for="filterName">
+                  Nama
+                </label>
+
+                <input
+                  type="text"
+                  id="filterName"
+                  placeholder="Cari nama..."
+                >
+
+              </div>
+
+
+              <div class="form-group">
+
+                <label for="filterMin">
+                  Nilai Minimum
+                </label>
+
+                <input
+                  type="number"
+                  id="filterMin"
+                  min="0"
+                  max="100"
+                  placeholder="0"
+                >
+
+              </div>
+
+
+              <div class="form-group">
+
+                <label for="filterMax">
+                  Nilai Maksimum
+                </label>
+
+                <input
+                  type="number"
+                  id="filterMax"
+                  min="0"
+                  max="100"
+                  placeholder="100"
+                >
+
+              </div>
+
+            </div>
+
+
+            <div class="filter-actions">
+
+              <button
+                type="button"
+                id="applyFilters"
+                class="btn btn-primary"
+              >
+                🔎 Terapkan Filter
+              </button>
+
+              <button
+                type="button"
+                id="resetFilters"
+                class="btn btn-secondary"
+              >
+                ↺ Reset
+              </button>
+
+            </div>
+
+          </div>
+
+
+          <!-- RESULTS -->
+
+          <div class="admin-card">
+
+            <div class="card-title-row">
+
+              <div>
+                <h2>
+                  📋 Daftar Hasil Ujian
+                </h2>
+
+                <p>
+                  Data diurutkan berdasarkan
+                  nama peserta.
+                </p>
+              </div>
+
+            </div>
+
+
+            <div class="table-wrapper">
+
+              <table class="results-table">
+
+                <thead>
+                  <tr>
+                    <th>No</th>
+                    <th>ID Ujian</th>
+                    <th>Tanggal</th>
+                    <th>Nama</th>
+                    <th>Kelas</th>
+                    <th>Total</th>
+                    <th>Benar</th>
+                    <th>Salah</th>
+                    <th>Nilai</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+
+                <tbody
+                  id="adminResultsBody"
+                ></tbody>
+
+              </table>
+
+            </div>
+
+          </div>
+
+
+          <!-- CLASS STATISTICS -->
+
+          <div class="admin-card">
+
+            <div class="card-title-row">
+
+              <div>
+                <h2>
+                  🏫 Statistik Per Kelas
+                </h2>
+
+                <p>
+                  Ringkasan performa setiap kelas.
+                </p>
+              </div>
+
+            </div>
+
+
+            <div class="table-wrapper">
+
+              <table class="results-table class-statistics-table">
+
+                <thead>
+                  <tr>
+                    <th>Kelas</th>
+                    <th>Peserta</th>
+                    <th>Rata-rata</th>
+                    <th>Tertinggi</th>
+                    <th>Terendah</th>
+                  </tr>
+                </thead>
+
+                <tbody
+                  id="classStatisticsBody"
+                ></tbody>
+
+              </table>
+
+            </div>
+
+          </div>
+
+
+          <!-- SEARCH ID -->
+
+          <div class="admin-card">
+
+            <div class="card-title-row">
+
+              <div>
+                <h2>
+                  🧾 Cari ID Ujian
+                </h2>
+
+                <p>
+                  Masukkan ID ujian untuk
+                  melihat ringkasannya.
+                </p>
+              </div>
+
+            </div>
+
+
+            <div class="exam-search">
+
+              <input
+                type="text"
+                id="examIdSearch"
+                placeholder="Contoh: UJ-20260915-0001"
+              >
+
+              <button
+                type="button"
+                id="searchExamBtn"
+                class="btn btn-primary"
+              >
+                🔎 Cari
+              </button>
+
+            </div>
+
+
+            <div
+              id="examIdResult"
+              class="exam-search-result"
+            >
+              <div class="search-empty">
+                Hasil pencarian akan muncul
+                di sini.
+              </div>
             </div>
 
           </div>
 
         </div>
 
+      </section>
 
-        <!-- Exam ID -->
-
-        <div class="exam-id-box">
-
-          <span>
-            ID UJIAN
-          </span>
-
-          <strong
-            id="resultExamId"
-          >
-            -
-          </strong>
-
-        </div>
+    </main>
 
 
-        <!-- Date -->
+    <!-- ==========================================================
+         FOOTER
+         ========================================================== -->
 
-        <div class="result-date">
+    <footer class="main-footer">
 
-          📅
-          <span id="resultDate">
-            -
-          </span>
+      <div>
+        <strong>
+          📚 Ujian Bahasa Indonesia
+        </strong>
 
-        </div>
+        <span>
+          Sistem Ujian Online
+        </span>
+      </div>
+
+      <span>
+        © 2026
+      </span>
+
+    </footer>
+
+  </div>
 
 
-        <!-- Result notice -->
+  <!-- ============================================================
+       CONFIRM MODAL
+       ============================================================ -->
 
-        <div class="result-notice">
+  <div
+    id="confirmModal"
+    class="modal-overlay"
+  >
 
-          <span>
-            💡
-          </span>
+    <div class="modal-card">
 
-          <p>
-            Simpan ID ujian jika sewaktu-waktu
-            diperlukan untuk pengecekan administrasi.
-          </p>
+      <div class="modal-icon">
+        📤
+      </div>
 
-        </div>
+      <h2>
+        Kirim Ujian?
+      </h2>
 
+      <p id="confirmMessage">
+        Apakah kamu yakin ingin
+        mengirim jawaban?
+      </p>
+
+      <div class="modal-actions">
 
         <button
           type="button"
-          id="finishButton"
-          class="btn btn-primary btn-large"
+          id="confirmCancel"
+          class="btn btn-secondary"
         >
-          ✓ SELESAI
+          Periksa Lagi
         </button>
-
-      </div>
-
-    </section>
-
-
-    <!-- =======================================================
-         SCREEN: FINISHED
-         ======================================================= -->
-
-    <section
-      id="finishedScreen"
-      class="screen finished-screen"
-      hidden
-    >
-
-      <div class="finished-card">
-
-        <div class="finished-icon">
-          🌟
-        </div>
-
-        <h1>
-          Terima Kasih!
-        </h1>
-
-        <p>
-          Ujian telah selesai.
-        </p>
-
-        <p class="finished-subtext">
-          Kamu dapat menutup halaman ini dengan aman.
-        </p>
-
-      </div>
-
-    </section>
-
-
-    <!-- =======================================================
-         GLOBAL MODAL
-         ======================================================= -->
-
-    <div
-      id="modalContainer"
-      class="modal-container"
-      hidden
-    >
-
-      <div
-        id="modalOverlay"
-        class="modal-overlay"
-      ></div>
-
-
-      <div
-        id="confirmSubmitModal"
-        class="modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="confirmSubmitTitle"
-        hidden
-      >
 
         <button
           type="button"
-          class="modal-close"
-          data-close-modal
-          aria-label="Tutup"
+          id="confirmSubmit"
+          class="btn btn-submit"
         >
-          ×
+          Ya, Kirim
         </button>
-
-
-        <div class="modal-icon">
-          📤
-        </div>
-
-
-        <h2 id="confirmSubmitTitle">
-          Kirim Jawaban?
-        </h2>
-
-
-        <p>
-          Kamu akan mengirim seluruh jawaban
-          yang sudah dikerjakan.
-        </p>
-
-
-        <div class="modal-summary">
-
-          <div>
-            <span>
-              Sudah dijawab
-            </span>
-
-            <strong
-              id="modalAnsweredCount"
-            >
-              0 / 40
-            </strong>
-          </div>
-
-
-          <div>
-            <span>
-              Belum dijawab
-            </span>
-
-            <strong
-              id="modalUnansweredCount"
-            >
-              40
-            </strong>
-          </div>
-
-        </div>
-
-
-        <div
-          id="unansweredWarning"
-          class="modal-warning"
-          hidden
-        >
-
-          ⚠️
-          <span>
-            Masih ada soal yang belum dijawab.
-            Kamu tetap dapat mengirim jawaban.
-          </span>
-
-        </div>
-
-
-        <div class="modal-actions">
-
-          <button
-            type="button"
-            class="btn btn-secondary"
-            data-close-modal
-          >
-            Kembali
-          </button>
-
-
-          <button
-            type="button"
-            id="confirmSubmitButton"
-            class="btn btn-submit"
-          >
-            📤 Kirim Sekarang
-          </button>
-
-        </div>
-
-      </div>
-
-
-      <!-- =====================================================
-           ALERT MODAL
-           ===================================================== -->
-
-      <div
-        id="alertModal"
-        class="modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="alertTitle"
-        hidden
-      >
-
-        <div
-          id="alertIcon"
-          class="modal-icon"
-        >
-          ℹ️
-        </div>
-
-
-        <h2 id="alertTitle">
-          Informasi
-        </h2>
-
-
-        <p
-          id="alertMessage"
-        >
-          -
-        </p>
-
-
-        <div class="modal-actions">
-
-          <button
-            type="button"
-            id="alertOkButton"
-            class="btn btn-primary"
-          >
-            OK
-          </button>
-
-        </div>
 
       </div>
 
     </div>
 
-
-    <!-- =======================================================
-         TOAST
-         ======================================================= -->
-
-    <div
-      id="toastContainer"
-      class="toast-container"
-      aria-live="polite"
-      aria-atomic="true"
-    ></div>
+  </div>
 
 
-    <!-- =======================================================
-         NOSCRIPT
-         ======================================================= -->
+  <!-- ============================================================
+       LOADING
+       ============================================================ -->
 
-    <noscript>
+  <div
+    id="loadingOverlay"
+    class="loading-overlay"
+  >
 
-      <div class="noscript-warning">
+    <div class="loading-card">
 
-        ⚠️
-        Aplikasi ujian membutuhkan JavaScript.
-        Silakan aktifkan JavaScript pada browser Anda.
+      <div class="loading-spinner"></div>
 
-      </div>
+      <strong class="loading-text">
+        Memuat...
+      </strong>
 
-    </noscript>
+      <small>
+        Mohon tunggu sebentar
+      </small>
 
-  </main>
+    </div>
+
+  </div>
 
 
-  <!-- =========================================================
-       JAVASCRIPT
-       ========================================================= -->
+  <!-- ============================================================
+       TOAST
+       ============================================================ -->
 
-  <script
-    src="script.js"
-    defer
-  ></script>
+  <div
+    id="toastContainer"
+    class="toast-container"
+  ></div>
+
+
+  <!-- ============================================================
+       SCRIPT
+       ============================================================ -->
+
+  <script src="script.js"></script>
+
+
+  <!-- ============================================================
+       COPY EXAM ID
+       ============================================================ -->
+
+  <script>
+    function copyExamId() {
+      const element =
+        document.getElementById('resultId');
+
+      if (!element) {
+        return;
+      }
+
+      const text =
+        element.textContent.trim();
+
+      if (!text || text === '-') {
+        return;
+      }
+
+      navigator.clipboard
+        .writeText(text)
+        .then(function() {
+
+          if (
+            window.UjianApp &&
+            typeof window.UjianApp.showToast ===
+              'function'
+          ) {
+            window.UjianApp.showToast(
+              'ID ujian berhasil disalin.',
+              'success'
+            );
+          } else {
+            alert(
+              'ID ujian berhasil disalin.'
+            );
+          }
+
+        })
+        .catch(function() {
+          alert(
+            'ID ujian: ' + text
+          );
+        });
+    }
+  </script>
 
 </body>
 </html>
