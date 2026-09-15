@@ -3066,22 +3066,3 @@ window.UjianBahasaIndonesia = {
 
   showAlert
 };
-```
-
-**Catatan penting sebelum dipasang:** ganti bagian ini:
-
-```javascript
-API_URL: 'GANTI_DENGAN_URL_WEB_APP_APPS_SCRIPT',
-```
-
-dengan URL **Web App Apps Script** yang berakhiran `/exec`, misalnya:
-
-```javascript
-API_URL: 'https://script.google.com/macros/s/XXXXXXXXXXXX/exec',
-```
-
-`script.js` di atas sudah disusun mengikuti ID elemen pada `index.html` terakhir dan struktur backend `Code.gs` kita: **40 soal → PG 26, PGK 8, B/S 6 → submit → `HASIL_UJIAN` + `JAWABAN_UJIAN`**.
-
-**Ada satu bagian yang sengaja saya perhatikan:** PGK dinormalisasi menjadi urutan huruf seperti `ABD`, sehingga cocok dengan mekanisme pemeriksaan kunci PGK di `Code.gs`.
-
-Langkah berikutnya adalah **`style.css`**, yang bisa kita buat penuh warna, 3D, responsif HP/desktop, kartu soal, sidebar nomor soal, tombol, modal, progress bar, dan halaman hasil tanpa mengubah `Code.gs`, `index.html`, maupun fungsi utama `script.js`.
