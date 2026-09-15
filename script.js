@@ -13,7 +13,7 @@
 
 const CONFIG = {
   // GANTI dengan URL Web App Google Apps Script milik Anda
-  API_URL: 'GANTI_DENGAN_URL_WEB_APP_APPS_SCRIPT',
+  API_URL: 'https://script.google.com/macros/s/AKfycbyTxIIdNsMgcxCdsD19-LsiWMGUsaMNvzO8BJPPp0OPpcu8WJcOdl4LE0eZI50fxxl7yQ/exec',
 
   TOTAL_SOAL: 40,
 
