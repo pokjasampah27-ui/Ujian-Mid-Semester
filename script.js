@@ -1,28 +1,32 @@
 ```javascript
 /* ================================================================
    APLIKASI UJIAN ONLINE BAHASA INDONESIA
-   FRONTEND - GITHUB PAGES
+   FRONTEND — GITHUB PAGES
+   ================================================================
+   Backend:
+   Google Apps Script Web App
+
+   Database:
+   Google Spreadsheet
+
+   API:
+   Code.gs yang disediakan
    ================================================================ */
 
-'use strict';
 
 /* ================================================================
    KONFIGURASI
    ================================================================ */
 
-/*
- * GANTI dengan URL Web App Google Apps Script kamu.
- *
- * Contoh:
- * https://script.google.com/macros/s/XXXXXXXXXXXX/exec
- */
 const CONFIG = {
-  API_URL:
-    'https://script.google.com/macros/s/AKfycbyTxIIdNsMgcxCdsD19-LsiWMGUsaMNvzO8BJPPp0OPpcu8WJcOdl4LE0eZI50fxxl7yQ/exec',
+  // ==============================================================
+  // GANTI DENGAN URL WEB APP GOOGLE APPS SCRIPT
+  // ==============================================================
+  API_URL: 'https://script.google.com/macros/s/AKfycbyTxIIdNsMgcxCdsD19-LsiWMGUsaMNvzO8BJPPp0OPpcu8WJcOdl4LE0eZI50fxxl7yQ/exec',
 
   TOTAL_SOAL: 40,
 
-  CLASSES: [
+  KELAS: [
     '12 M1',
     '12 M2',
     '12 M3',
@@ -30,238 +34,120 @@ const CONFIG = {
     '12 M5'
   ],
 
-  STORAGE_KEYS: {
-    EXAM: 'ujian_bahasa_indonesia_exam',
-    ADMIN_TOKEN: 'ujian_bahasa_indonesia_admin_token'
-  }
+  DURASI_UJIAN: 90,
+
+  STORAGE_KEY: 'UJIAN_BAHASA_INDONESIA_STATE_V1',
+
+  ADMIN_TOKEN_KEY: 'UJIAN_BAHASA_INDONESIA_ADMIN_TOKEN',
+
+  SUBMISSION_KEY: 'UJIAN_BAHASA_INDONESIA_SUBMISSION_ID'
 };
 
 
 /* ================================================================
-   STATE
+   STATE APLIKASI
    ================================================================ */
 
 const state = {
   questions: [],
-  currentQuestion: 0,
   answers: {},
-  student: {
-    nama: '',
-    kelas: '',
-    tanggal: ''
-  },
+
+  currentQuestion: 0,
+
+  nama: '',
+  kelas: '',
+  tanggal: '',
+
   submissionId: '',
-  submitted: false,
 
-  admin: {
-    token: '',
-    loggedIn: false
-  },
+  examStarted: false,
+  examSubmitted: false,
 
-  results: [],
-  statistics: null,
-  classStatistics: [],
+  remainingSeconds:
+    CONFIG.DURASI_UJIAN * 60,
 
-  loading: false
+  timerInterval: null,
+
+  classes: [],
+
+  adminToken:
+    sessionStorage.getItem(
+      CONFIG.ADMIN_TOKEN_KEY
+    ) || '',
+
+  adminResults: [],
+
+  currentAdminPage: 1,
+
+  adminPageSize: 10
 };
 
 
 /* ================================================================
-   DOM
+   DOM HELPER
    ================================================================ */
 
-const DOM = {};
+function $(selector) {
+  return document.querySelector(selector);
+}
 
 
-/* ================================================================
-   INITIALIZATION
-   ================================================================ */
-
-document.addEventListener('DOMContentLoaded', initApp);
-
-async function initApp() {
-  cacheDOM();
-
-  setupEventListeners();
-
-  setTodayDate();
-
-  restoreAdminSession();
-
-  renderClassOptions();
-
-  showView('landing');
-
-  updateConnectionStatus('checking');
-
-  await checkApi();
-
-  await loadQuestions();
+function $$(selector) {
+  return Array.from(
+    document.querySelectorAll(selector)
+  );
 }
 
 
 /* ================================================================
-   CACHE DOM
+   INIT
    ================================================================ */
 
-function cacheDOM() {
-  DOM.app = document.getElementById('app');
+document.addEventListener(
+  'DOMContentLoaded',
+  function() {
+    initApplication();
+  }
+);
 
-  DOM.connectionStatus =
-    document.getElementById('connectionStatus');
 
-  DOM.loadingOverlay =
-    document.getElementById('loadingOverlay');
+async function initApplication() {
+  try {
+    setupEventListeners();
 
-  DOM.toastContainer =
-    document.getElementById('toastContainer');
+    setTodayDate();
 
-  DOM.landingView =
-    document.getElementById('landingView');
+    generateSubmissionId();
 
-  DOM.studentView =
-    document.getElementById('studentView');
+    restoreExamState();
 
-  DOM.examView =
-    document.getElementById('examView');
+    await loadClasses();
 
-  DOM.resultView =
-    document.getElementById('resultView');
+    if (
+      state.examStarted &&
+      !state.examSubmitted
+    ) {
+      await loadQuestions();
 
-  DOM.adminView =
-    document.getElementById('adminView');
+      renderExam();
 
-  DOM.studentForm =
-    document.getElementById('studentForm');
+      startTimer();
 
-  DOM.studentName =
-    document.getElementById('studentName');
+      showPage('examPage');
 
-  DOM.studentClass =
-    document.getElementById('studentClass');
+      return;
+    }
 
-  DOM.examDate =
-    document.getElementById('examDate');
+    showPage('startPage');
 
-  DOM.questionContainer =
-    document.getElementById('questionContainer');
+  } catch (error) {
+    console.error(error);
 
-  DOM.questionNumber =
-    document.getElementById('questionNumber');
-
-  DOM.questionType =
-    document.getElementById('questionType');
-
-  DOM.questionProgress =
-    document.getElementById('questionProgress');
-
-  DOM.progressBar =
-    document.getElementById('progressBar');
-
-  DOM.questionNav =
-    document.getElementById('questionNav');
-
-  DOM.prevQuestion =
-    document.getElementById('prevQuestion');
-
-  DOM.nextQuestion =
-    document.getElementById('nextQuestion');
-
-  DOM.submitExam =
-    document.getElementById('submitExam');
-
-  DOM.examStudentName =
-    document.getElementById('examStudentName');
-
-  DOM.examStudentClass =
-    document.getElementById('examStudentClass');
-
-  DOM.resultId =
-    document.getElementById('resultId');
-
-  DOM.resultName =
-    document.getElementById('resultName');
-
-  DOM.resultClass =
-    document.getElementById('resultClass');
-
-  DOM.resultCorrect =
-    document.getElementById('resultCorrect');
-
-  DOM.resultWrong =
-    document.getElementById('resultWrong');
-
-  DOM.resultScore =
-    document.getElementById('resultScore');
-
-  DOM.resultStatus =
-    document.getElementById('resultStatus');
-
-  DOM.adminLoginForm =
-    document.getElementById('adminLoginForm');
-
-  DOM.adminPin =
-    document.getElementById('adminPin');
-
-  DOM.adminDashboard =
-    document.getElementById('adminDashboard');
-
-  DOM.adminLoginPanel =
-    document.getElementById('adminLoginPanel');
-
-  DOM.adminResultsBody =
-    document.getElementById('adminResultsBody');
-
-  DOM.adminTotal =
-    document.getElementById('adminTotal');
-
-  DOM.adminAverage =
-    document.getElementById('adminAverage');
-
-  DOM.adminHighest =
-    document.getElementById('adminHighest');
-
-  DOM.adminLowest =
-    document.getElementById('adminLowest');
-
-  DOM.filterClass =
-    document.getElementById('filterClass');
-
-  DOM.filterDate =
-    document.getElementById('filterDate');
-
-  DOM.filterName =
-    document.getElementById('filterName');
-
-  DOM.filterMin =
-    document.getElementById('filterMin');
-
-  DOM.filterMax =
-    document.getElementById('filterMax');
-
-  DOM.examIdSearch =
-    document.getElementById('examIdSearch');
-
-  DOM.examIdResult =
-    document.getElementById('examIdResult');
-
-  DOM.classStatisticsBody =
-    document.getElementById('classStatisticsBody');
-
-  DOM.confirmModal =
-    document.getElementById('confirmModal');
-
-  DOM.confirmMessage =
-    document.getElementById('confirmMessage');
-
-  DOM.confirmCancel =
-    document.getElementById('confirmCancel');
-
-  DOM.confirmSubmit =
-    document.getElementById('confirmSubmit');
-
-  DOM.adminLogout =
-    document.getElementById('adminLogout');
+    showError(
+      'Gagal memuat aplikasi. ' +
+      getErrorMessage(error)
+    );
+  }
 }
 
 
@@ -271,172 +157,253 @@ function cacheDOM() {
 
 function setupEventListeners() {
 
-  /* Tombol mulai siswa */
-  document
-    .getElementById('startStudentBtn')
-    ?.addEventListener('click', function() {
-      showView('student');
-    });
+  /* --------------------------------------------------------------
+     SISWA
+     -------------------------------------------------------------- */
 
+  bindClick(
+    '#btnStartExam',
+    startExam
+  );
 
-  /* Tombol admin */
-  document
-    .getElementById('adminBtn')
-    ?.addEventListener('click', function() {
-      if (state.admin.loggedIn) {
-        showView('admin');
-        loadAdminDashboard();
-      } else {
-        showView('adminLogin');
+  bindClick(
+    '#btnPrevious',
+    previousQuestion
+  );
+
+  bindClick(
+    '#btnNext',
+    nextQuestion
+  );
+
+  bindClick(
+    '#btnSubmitExam',
+    confirmSubmitExam
+  );
+
+  bindClick(
+    '#btnBackToStart',
+    resetAndBackToStart
+  );
+
+  bindClick(
+    '#btnViewExamResult',
+    function() {
+      const id =
+        state.lastResult &&
+        state.lastResult.idUjian;
+
+      if (id) {
+        loadExamResult(id);
       }
-    });
-
-
-  /* Form siswa */
-  DOM.studentForm?.addEventListener(
-    'submit',
-    handleStudentFormSubmit
-  );
-
-
-  /* Navigasi soal */
-  DOM.prevQuestion?.addEventListener(
-    'click',
-    function() {
-      goToQuestion(
-        state.currentQuestion - 1
-      );
-    }
-  );
-
-  DOM.nextQuestion?.addEventListener(
-    'click',
-    function() {
-      goToQuestion(
-        state.currentQuestion + 1
-      );
     }
   );
 
 
-  /* Submit ujian */
-  DOM.submitExam?.addEventListener(
-    'click',
-    openSubmitConfirmation
+  /* --------------------------------------------------------------
+     NAVIGASI
+     -------------------------------------------------------------- */
+
+  bindClick(
+    '#navStudent',
+    function() {
+      showPage('startPage');
+    }
+  );
+
+  bindClick(
+    '#navAdmin',
+    function() {
+      showPage('adminLoginPage');
+    }
   );
 
 
-  /* Konfirmasi */
-  DOM.confirmCancel?.addEventListener(
-    'click',
-    closeConfirmModal
+  /* --------------------------------------------------------------
+     ADMIN LOGIN
+     -------------------------------------------------------------- */
+
+  bindClick(
+    '#btnAdminLogin',
+    adminLogin
   );
 
-  DOM.confirmSubmit?.addEventListener(
-    'click',
-    submitExam
-  );
-
-
-  /* Admin login */
-  DOM.adminLoginForm?.addEventListener(
-    'submit',
-    handleAdminLogin
+  bindClick(
+    '#btnAdminLogout',
+    adminLogout
   );
 
 
-  /* Filter admin */
-  document
-    .getElementById('applyFilters')
-    ?.addEventListener(
-      'click',
-      loadAdminResults
+  /* --------------------------------------------------------------
+     ADMIN DASHBOARD
+     -------------------------------------------------------------- */
+
+  bindClick(
+    '#btnLoadResults',
+    loadAdminDashboard
+  );
+
+  bindClick(
+    '#btnLoadStatistics',
+    loadAdminStatistics
+  );
+
+  bindClick(
+    '#btnLoadClassStatistics',
+    loadClassStatistics
+  );
+
+  bindClick(
+    '#btnSearchExamResult',
+    searchExamResult
+  );
+
+  bindClick(
+    '#btnAdminResetFilter',
+    resetAdminFilters
+  );
+
+
+  /* --------------------------------------------------------------
+     ENTER PADA INPUT ADMIN
+     -------------------------------------------------------------- */
+
+  const adminPin =
+    $('#adminPin');
+
+  if (adminPin) {
+    adminPin.addEventListener(
+      'keydown',
+      function(event) {
+        if (
+          event.key === 'Enter'
+        ) {
+          adminLogin();
+        }
+      }
+    );
+  }
+
+
+  /* --------------------------------------------------------------
+     FILTER ADMIN
+     -------------------------------------------------------------- */
+
+  [
+    '#filterKelas',
+    '#filterTanggal',
+    '#filterNama',
+    '#filterNilaiMin',
+    '#filterNilaiMax'
+  ].forEach(function(selector) {
+
+    const element =
+      $(selector);
+
+    if (!element) return;
+
+    element.addEventListener(
+      'change',
+      function() {
+        if (
+          state.adminToken
+        ) {
+          loadAdminDashboard();
+        }
+      }
     );
 
-
-  document
-    .getElementById('resetFilters')
-    ?.addEventListener(
-      'click',
-      resetAdminFilters
+    element.addEventListener(
+      'keydown',
+      function(event) {
+        if (
+          event.key === 'Enter'
+        ) {
+          loadAdminDashboard();
+        }
+      }
     );
+  });
 
 
-  /* Search ID ujian */
-  document
-    .getElementById('searchExamBtn')
-    ?.addEventListener(
-      'click',
-      searchExamResult
-    );
+  /* --------------------------------------------------------------
+     MODAL
+     -------------------------------------------------------------- */
 
-
-  /* Logout */
-  DOM.adminLogout?.addEventListener(
-    'click',
-    logoutAdmin
+  bindClick(
+    '#btnCloseModal',
+    closeModal
   );
 
-
-  /* Kembali */
-  document
-    .querySelectorAll('[data-action="home"]')
-    .forEach(function(button) {
-      button.addEventListener(
-        'click',
-        function() {
-          showView('landing');
-        }
-      );
-    });
-
-
-  document
-    .querySelectorAll('[data-action="student"]')
-    .forEach(function(button) {
-      button.addEventListener(
-        'click',
-        function() {
-          showView('student');
-        }
-      );
-    });
-
-
-  document
-    .querySelectorAll('[data-action="admin"]')
-    .forEach(function(button) {
-      button.addEventListener(
-        'click',
-        function() {
-          if (state.admin.loggedIn) {
-            showView('admin');
-            loadAdminDashboard();
-          } else {
-            showView('adminLogin');
-          }
-        }
-      );
-    });
-
-
-  /* Keyboard */
-  document.addEventListener(
-    'keydown',
-    handleKeyboardNavigation
-  );
-
-
-  /* Klik modal di luar */
-  DOM.confirmModal?.addEventListener(
-    'click',
+  bindClick(
+    '#modalOverlay',
     function(event) {
       if (
-        event.target === DOM.confirmModal
+        event.target ===
+        $('#modalOverlay')
       ) {
-        closeConfirmModal();
+        closeModal();
       }
     }
+  );
+
+
+  /* --------------------------------------------------------------
+     ESC
+     -------------------------------------------------------------- */
+
+  document.addEventListener(
+    'keydown',
+    function(event) {
+      if (
+        event.key === 'Escape'
+      ) {
+        closeModal();
+      }
+    }
+  );
+
+
+  /* --------------------------------------------------------------
+     BEFORE UNLOAD
+     -------------------------------------------------------------- */
+
+  window.addEventListener(
+    'beforeunload',
+    function(event) {
+
+      if (
+        state.examStarted &&
+        !state.examSubmitted
+      ) {
+        saveExamState();
+
+        event.preventDefault();
+
+        event.returnValue =
+          'Ujian masih berlangsung.';
+      }
+    }
+  );
+}
+
+
+/* ================================================================
+   BIND CLICK AMAN
+   ================================================================ */
+
+function bindClick(
+  selector,
+  handler
+) {
+  const element =
+    $(selector);
+
+  if (!element) return;
+
+  element.addEventListener(
+    'click',
+    handler
   );
 }
 
@@ -445,49 +412,67 @@ function setupEventListeners() {
    API
    ================================================================ */
 
-async function apiGet(action, params = {}) {
+async function apiGet(
+  action,
+  params = {}
+) {
+
   if (
     !CONFIG.API_URL ||
     CONFIG.API_URL.indexOf(
       'GANTI_DENGAN'
-    ) === 0
+    ) !== -1
   ) {
     throw new Error(
-      'URL Web App Apps Script belum diatur.'
+      'API_URL belum diatur pada script.js.'
     );
   }
 
-  const url = new URL(CONFIG.API_URL);
+  const query =
+    new URLSearchParams();
 
-  url.searchParams.set(
+  query.set(
     'action',
     action
   );
 
-  Object.keys(params).forEach(function(key) {
-    const value = params[key];
+  Object.keys(params)
+    .forEach(function(key) {
 
-    if (
-      value !== undefined &&
-      value !== null &&
-      value !== ''
-    ) {
-      url.searchParams.set(
+      const value =
+        params[key];
+
+      if (
+        value === undefined ||
+        value === null ||
+        value === ''
+      ) {
+        return;
+      }
+
+      query.set(
         key,
-        value
+        String(value)
       );
-    }
-  });
+    });
+
+  const url =
+    CONFIG.API_URL +
+    '?' +
+    query.toString();
 
   const response =
-    await fetch(url.toString(), {
-      method: 'GET',
-      cache: 'no-store'
-    });
+    await fetch(
+      url,
+      {
+        method: 'GET',
+        redirect: 'follow'
+      }
+    );
 
   if (!response.ok) {
     throw new Error(
-      'Server mengembalikan HTTP ' +
+      'HTTP ' +
       response.status
     );
   }
@@ -495,9 +480,14 @@ async function apiGet(action, params = {}) {
   const data =
     await response.json();
 
-  if (!data || typeof data !== 'object') {
+  if (
+    data &&
+    data.success === false &&
+    !data.unauthorized
+  ) {
     throw new Error(
-      'Respons server tidak valid.'
+      data.error ||
+      'Permintaan gagal.'
     );
   }
 
@@ -505,51 +495,48 @@ async function apiGet(action, params = {}) {
 }
 
 
-/*
- * Menggunakan text/plain untuk POST.
- *
- * Ini membantu menghindari preflight CORS
- * yang biasanya muncul jika menggunakan
- * Content-Type application/json.
- *
- * Backend tetap menggunakan:
- * parsePostData_(e)
- */
-async function apiPost(action, payload = {}) {
+async function apiPost(
+  action,
+  payload = {}
+) {
+
   if (
     !CONFIG.API_URL ||
     CONFIG.API_URL.indexOf(
       'GANTI_DENGAN'
-    ) === 0
+    ) !== -1
   ) {
     throw new Error(
-      'URL Web App Apps Script belum diatur.'
+      'API_URL belum diatur pada script.js.'
     );
   }
 
-  const body = Object.assign(
-    {},
-    payload,
-    {
-      action: action
-    }
-  );
+  const body = {
+    action: action,
+    ...payload
+  };
 
   const response =
     await fetch(
       CONFIG.API_URL,
       {
         method: 'POST',
+
         headers: {
-          'Content-Type': 'text/plain;charset=utf-8'
+          'Content-Type':
+            'text/plain;charset=utf-8'
         },
-        body: JSON.stringify(body)
+
+        body:
+          JSON.stringify(body),
+
+        redirect: 'follow'
       }
     );
 
   if (!response.ok) {
     throw new Error(
-      'Server mengembalikan HTTP ' +
+      'HTTP ' +
       response.status
     );
   }
@@ -557,420 +544,308 @@ async function apiPost(action, payload = {}) {
   const data =
     await response.json();
 
-  if (!data || typeof data !== 'object') {
-    throw new Error(
-      'Respons server tidak valid.'
-    );
-  }
-
   return data;
 }
 
 
 /* ================================================================
-   CONNECTION
+   PING SERVER
    ================================================================ */
 
-async function checkApi() {
-  try {
-    const data =
-      await apiGet('ping');
-
-    if (data.success) {
-      updateConnectionStatus('online');
-    } else {
-      updateConnectionStatus('offline');
-    }
-
-    return data;
-  } catch (error) {
-    console.error(error);
-
-    updateConnectionStatus('offline');
-
-    return null;
-  }
+async function pingServer() {
+  return apiGet(
+    'ping'
+  );
 }
 
 
-function updateConnectionStatus(status) {
-  if (!DOM.connectionStatus) {
-    return;
-  }
+/* ================================================================
+   LOAD KELAS
+   ================================================================ */
 
-  const label =
-    DOM.connectionStatus.querySelector(
-     ('.connection-label')
+async function loadClasses() {
+
+  try {
+
+    const data =
+      await apiGet(
+        'getClasses'
+      );
+
+    if (
+      data &&
+      data.success &&
+      Array.isArray(
+        data.classes
+      )
+    ) {
+      state.classes =
+        data.classes;
+    } else {
+      state.classes =
+        CONFIG.KELAS.slice();
+    }
+
+  } catch (error) {
+
+    console.warn(
+      'Gagal mengambil kelas dari server:',
+      error
     );
 
-  const dot =
-    DOM.connectionStatus.querySelector(
-     ('.connection-dot')
+    state.classes =
+      CONFIG.KELAS.slice();
+  }
+
+  populateClassSelects();
+}
+
+
+/* ================================================================
+   POPULATE CLASS SELECT
+   ================================================================ */
+
+function populateClassSelects() {
+
+  const studentSelect =
+    $('#kelas');
+
+  if (studentSelect) {
+
+    studentSelect.innerHTML =
+      '<option value="">Pilih kelas</option>';
+
+    state.classes.forEach(
+      function(kelas) {
+
+        const option =
+          document.createElement(
+            'option'
+          );
+
+        option.value =
+          kelas;
+
+        option.textContent =
+          kelas;
+
+        studentSelect.appendChild(
+          option
+        );
+      }
     );
-
-  if (status === 'online') {
-    DOM.connectionStatus.dataset.status =
-      'online';
-
-    if (label) {
-      label.textContent =
-        'Terhubung';
-    }
-
-    if (dot) {
-      dot.textContent = '●';
-    }
-
-    return;
   }
 
-  if (status === 'checking') {
-    DOM.connectionStatus.dataset.status =
-      'checking';
 
-    if (label) {
-      label.textContent =
-        'Menghubungkan...';
-    }
+  const filterSelect =
+    $('#filterKelas');
 
-    if (dot) {
-      dot.textContent = '●';
-    }
+  if (filterSelect) {
 
-    return;
-  }
+    filterSelect.innerHTML =
+      '<option value="">Semua Kelas</option>';
 
-  DOM.connectionStatus.dataset.status =
-    'offline';
+    state.classes.forEach(
+      function(kelas) {
 
-  if (label) {
-    label.textContent =
-      'Tidak terhubung';
-  }
+        const option =
+          document.createElement(
+            'option'
+          );
 
-  if (dot) {
-    dot.textContent = '●';
+        option.value =
+          kelas;
+
+        option.textContent =
+          kelas;
+
+        filterSelect.appendChild(
+          option
+        );
+      }
+    );
   }
 }
 
 
 /* ================================================================
-   QUESTIONS
+   LOAD QUESTIONS
    ================================================================ */
 
 async function loadQuestions() {
+
+  showLoading(
+    'Memuat soal ujian...'
+  );
+
   try {
-    setLoading(true);
 
     const data =
-      await apiGet('getQuestions');
+      await apiGet(
+        'getQuestions'
+      );
 
-    if (!data.success) {
+    if (
+      !data ||
+      !data.success
+    ) {
       throw new Error(
-        data.error ||
-        'Soal gagal dimuat.'
+        data &&
+        data.error
+          ? data.error
+          : 'Soal gagal dimuat.'
       );
     }
 
     if (
-      !Array.isArray(data.questions)
+      !Array.isArray(
+        data.questions
+      )
     ) {
       throw new Error(
-        'Format soal dari server tidak valid.'
+        'Format data soal tidak valid.'
+      );
+    }
+
+    if (
+      data.questions.length !==
+      CONFIG.TOTAL_SOAL
+    ) {
+      throw new Error(
+        'Jumlah soal dari server adalah ' +
+        data.questions.length +
+        ', seharusnya ' +
+        CONFIG.TOTAL_SOAL +
+        '.'
       );
     }
 
     state.questions =
       data.questions;
 
-    if (
-      state.questions.length !==
-      CONFIG.TOTAL_SOAL
-    ) {
-      throw new Error(
-        'Server mengirim ' +
-        state.questions.length +
-        ' soal. Seharusnya ' +
-        CONFIG.TOTAL_SOAL +
-        ' soal.'
-      );
-    }
-
-    renderQuestionNav();
-
-  } catch (error) {
-    console.error(error);
-
-    showToast(
-      error.message ||
-      'Soal gagal dimuat.',
-      'error'
-    );
+    return state.questions;
 
   } finally {
-    setLoading(false);
+
+    hideLoading();
   }
 }
 
 
 /* ================================================================
-   CLASS
+   MULAI UJIAN
    ================================================================ */
 
-function renderClassOptions() {
-  const selects = [
-    DOM.studentClass,
-    DOM.filterClass
-  ];
+async function startExam() {
 
-  selects.forEach(function(select) {
-    if (!select) {
-      return;
-    }
+  clearMessages();
 
-    const isFilter =
-      select === DOM.filterClass;
+  const namaInput =
+    $('#nama');
 
-    select.innerHTML = '';
-
-    if (isFilter) {
-      select.appendChild(
-        createOption(
-          'SEMUA',
-          'Semua kelas'
-        )
-      );
-    } else {
-      select.appendChild(
-        createOption(
-          '',
-          'Pilih kelas'
-        )
-      );
-    }
-
-    CONFIG.CLASSES.forEach(function(kelas) {
-      select.appendChild(
-        createOption(
-          kelas,
-          kelas
-        )
-      );
-    });
-  });
-}
-
-
-function createOption(value, text) {
-  const option =
-    document.createElement('option');
-
-  option.value = value;
-  option.textContent = text;
-
-  return option;
-}
-
-
-/* ================================================================
-   DATE
-   ================================================================ */
-
-function setTodayDate() {
-  if (!DOM.examDate) {
-    return;
-  }
-
-  const now =
-    new Date();
-
-  const day =
-    String(
-      now.getDate()
-    ).padStart(2, '0');
-
-  const month =
-    String(
-      now.getMonth() + 1
-    ).padStart(2, '0');
-
-  const year =
-    now.getFullYear();
-
-  /*
-   * Input type=date membutuhkan YYYY-MM-DD.
-   */
-  DOM.examDate.value =
-    year +
-    '-' +
-    month +
-    '-' +
-    day;
-}
-
-
-function convertDateToBackend(
-  isoDate
-) {
-  if (!isoDate) {
-    return '';
-  }
-
-  const match =
-    isoDate.match(
-      /^(\d{4})-(\d{2})-(\d{2})$/
-    );
-
-  if (!match) {
-    return isoDate;
-  }
-
-  return (
-    match[3] +
-    '-' +
-    match[2] +
-    '-' +
-    match[1]
-  );
-}
-
-
-/* ================================================================
-   STUDENT FORM
-   ================================================================ */
-
-async function handleStudentFormSubmit(event) {
-  event.preventDefault();
+  const kelasInput =
+    $('#kelas');
 
   const nama =
-    DOM.studentName.value.trim();
+    namaInput
+      ? namaInput.value.trim()
+      : '';
 
   const kelas =
-    DOM.studentClass.value;
-
-  const tanggal =
-    DOM.examDate.value;
+    kelasInput
+      ? kelasInput.value.trim()
+      : '';
 
   if (!nama) {
-    showToast(
-      'Nama lengkap wajib diisi.',
-      'warning'
+
+    showError(
+      'Nama lengkap wajib diisi.'
     );
 
-    DOM.studentName.focus();
+    if (namaInput) {
+      namaInput.focus();
+    }
 
     return;
   }
 
   if (!kelas) {
-    showToast(
-      'Silakan pilih kelas.',
-      'warning'
+
+    showError(
+      'Silakan pilih kelas.'
     );
 
-    DOM.studentClass.focus();
+    if (kelasInput) {
+      kelasInput.focus();
+    }
 
     return;
   }
 
-  if (!tanggal) {
-    showToast(
-      'Tanggal ujian wajib diisi.',
-      'warning'
-    );
 
-    DOM.examDate.focus();
+  state.nama =
+    nama;
 
-    return;
-  }
+  state.kelas =
+    kelas;
 
-  if (
-    state.questions.length !==
-    CONFIG.TOTAL_SOAL
-  ) {
-    showToast(
-      'Soal belum siap. Tunggu sebentar.',
-      'warning'
-    );
+  state.tanggal =
+    getTodayIndonesianDate();
+
+  state.currentQuestion =
+    0;
+
+  state.answers =
+    {};
+
+  state.remainingSeconds =
+    CONFIG.DURASI_UJIAN * 60;
+
+  state.examStarted =
+    true;
+
+  state.examSubmitted =
+    false;
+
+  generateSubmissionId();
+
+  saveExamState();
+
+
+  try {
 
     await loadQuestions();
 
-    if (
-      state.questions.length !==
-      CONFIG.TOTAL_SOAL
-    ) {
-      return;
-    }
+    renderExam();
+
+    showPage(
+      'examPage'
+    );
+
+    startTimer();
+
+  } catch (error) {
+
+    state.examStarted =
+      false;
+
+    saveExamState();
+
+    showError(
+      getErrorMessage(error)
+    );
   }
-
-  state.student = {
-    nama: nama,
-    kelas: kelas,
-    tanggal: tanggal
-  };
-
-  state.answers = {};
-  state.currentQuestion = 0;
-  state.submitted = false;
-
-  state.submissionId =
-    createSubmissionId();
-
-  saveExamToStorage();
-
-  prepareExamScreen();
-
-  showView('exam');
 }
 
 
 /* ================================================================
-   SUBMISSION ID
+   RENDER EXAM
    ================================================================ */
 
-function createSubmissionId() {
-  const timestamp =
-    Date.now();
+function renderExam() {
 
-  const random =
-    Math.random()
-      .toString(36)
-      .substring(2, 10);
-
-  return (
-    'SUB-' +
-    timestamp +
-    '-' +
-    random
-  );
-}
-
-
-/* ================================================================
-   EXAM
-   ================================================================ */
-
-function prepareExamScreen() {
-  DOM.examStudentName.textContent =
-    state.student.nama;
-
-  DOM.examStudentClass.textContent =
-    state.student.kelas;
-
-  renderQuestionNav();
-
-  renderCurrentQuestion();
-
-  updateExamProgress();
-}
-
-
-function renderCurrentQuestion() {
-  if (
-    !state.questions.length
-  ) {
-    return;
-  }
+  const total =
+    state.questions.length;
 
   const question =
     state.questions[
@@ -981,735 +856,1120 @@ function renderCurrentQuestion() {
     return;
   }
 
-  DOM.questionNumber.textContent =
-    'Soal ' + question.no;
 
-  DOM.questionType.textContent =
-    getQuestionTypeLabel(
-      question.bentuk
-    );
+  /* --------------------------------------------------------------
+     DATA SISWA
+     -------------------------------------------------------------- */
 
-  DOM.questionContainer.innerHTML = '';
+  setText(
+    '#examStudentName',
+    state.nama
+  );
 
-  const wrapper =
-    document.createElement('div');
+  setText(
+    '#examStudentClass',
+    state.kelas
+  );
 
-  wrapper.className =
-    'question-card';
-
-
-  /* Stimulus */
-  if (question.stimulus) {
-    const stimulus =
-      document.createElement('div');
-
-    stimulus.className =
-      'question-stimulus';
-
-    const title =
-      document.createElement('div');
-
-    title.className =
-      'stimulus-title';
-
-    title.textContent =
-      '📖 Stimulus';
-
-    const text =
-      document.createElement('div');
-
-    text.className =
-      'stimulus-text';
-
-    text.textContent =
-      question.stimulus;
-
-    stimulus.appendChild(title);
-    stimulus.appendChild(text);
-
-    wrapper.appendChild(stimulus);
-  }
-
-
-  /* Pertanyaan */
-  const questionText =
-    document.createElement('div');
-
-  questionText.className =
-    'question-text';
-
-  questionText.textContent =
-    question.pertanyaan;
-
-  wrapper.appendChild(
-    questionText
+  setText(
+    '#examDate',
+    state.tanggal
   );
 
 
-  /* Pilihan */
-  const choices =
-    document.createElement('div');
+  /* --------------------------------------------------------------
+     NOMOR SOAL
+     -------------------------------------------------------------- */
 
-  choices.className =
-    'answer-choices';
+  setText(
+    '#questionNumber',
+    question.no
+  );
+
+  setText(
+    '#questionTotal',
+    total
+  );
+
+
+  /* --------------------------------------------------------------
+     BENTUK
+     -------------------------------------------------------------- */
+
+  setText(
+    '#questionType',
+    getQuestionTypeLabel(
+      question.bentuk
+    )
+  );
+
+
+  /* --------------------------------------------------------------
+     PROGRESS
+     -------------------------------------------------------------- */
+
+  const progress =
+    ((state.currentQuestion + 1) /
+      total) *
+    100;
+
+  const progressBar =
+    $('#questionProgress');
+
+  if (progressBar) {
+    progressBar.style.width =
+      progress + '%';
+  }
+
+  setText(
+    '#progressPercent',
+    Math.round(progress) +
+      '%'
+  );
+
+
+  /* --------------------------------------------------------------
+     STIMULUS
+     -------------------------------------------------------------- */
+
+  const stimulus =
+    $('#questionStimulus');
+
+  if (stimulus) {
+
+    if (
+      question.stimulus &&
+      question.stimulus.trim()
+    ) {
+
+      stimulus.innerHTML =
+        formatText(
+          question.stimulus
+        );
+
+      stimulus.style.display =
+        '';
+
+    } else {
+
+      stimulus.innerHTML =
+        '';
+
+      stimulus.style.display =
+        'none';
+    }
+  }
+
+
+  /* --------------------------------------------------------------
+     PERTANYAAN
+     -------------------------------------------------------------- */
+
+  const questionText =
+    $('#questionText');
+
+  if (questionText) {
+
+    questionText.innerHTML =
+      formatText(
+        question.pertanyaan
+      );
+  }
+
+
+  /* --------------------------------------------------------------
+     OPTIONS
+     -------------------------------------------------------------- */
+
+  renderOptions(
+    question
+  );
+
+
+  /* --------------------------------------------------------------
+     NAVIGATION
+     -------------------------------------------------------------- */
+
+  updateNavigationButtons();
+
+  renderQuestionPalette();
+
+  updateAnsweredCounter();
+
+  saveExamState();
+}
+
+
+/* ================================================================
+   RENDER OPTIONS
+   ================================================================ */
+
+function renderOptions(
+  question
+) {
+
+  const container =
+    $('#answerOptions');
+
+  if (!container) {
+    return;
+  }
+
+  container.innerHTML =
+    '';
+
 
   const type =
     normalizeQuestionType(
       question.bentuk
     );
 
+
   if (type === 'PG') {
-    renderPGChoices(
-      choices,
+
+    renderPGOptions(
+      container,
       question
     );
+
+    return;
   }
+
 
   if (type === 'PGK') {
-    renderPGKChoices(
-      choices,
+
+    renderPGKOptions(
+      container,
       question
     );
+
+    return;
   }
+
 
   if (type === 'B/S') {
-    renderTrueFalseChoices(
-      choices,
+
+    renderBSOptions(
+      container,
       question
     );
+
+    return;
   }
 
-  wrapper.appendChild(
-    choices
-  );
 
-  DOM.questionContainer.appendChild(
-    wrapper
-  );
-
-  updateNavigationButtons();
-
-  updateQuestionNavActive();
+  container.innerHTML =
+    '<div class="answer-error">' +
+    'Jenis soal tidak dikenali.' +
+    '</div>';
 }
 
 
 /* ================================================================
-   PG
+   RENDER PG
    ================================================================ */
 
-function renderPGChoices(
+function renderPGOptions(
   container,
   question
 ) {
-  const saved =
+
+  const letters =
+    ['A', 'B', 'C', 'D'];
+
+  const current =
     state.answers[
       String(question.no)
     ] || '';
 
-  ['A', 'B', 'C', 'D']
-    .forEach(function(letter) {
 
-      const value =
-        question.pilihan?.[letter] || '';
+  letters.forEach(
+    function(letter) {
 
       const label =
-        document.createElement('label');
+        document.createElement(
+          'label'
+        );
 
       label.className =
         'answer-option';
 
-      if (saved === letter) {
-        label.classList.add('selected');
-      }
 
       const input =
-        document.createElement('input');
+        document.createElement(
+          'input'
+        );
 
-      input.type = 'radio';
+      input.type =
+        'radio';
+
       input.name =
-        'question_' + question.no;
+        'question_' +
+        question.no;
 
       input.value =
         letter;
 
       input.checked =
-        saved === letter;
+        current === letter;
+
+
+      const letterBox =
+        document.createElement(
+          'span'
+        );
+
+      letterBox.className =
+        'option-letter';
+
+      letterBox.textContent =
+        letter;
+
+
+      const text =
+        document.createElement(
+          'span'
+        );
+
+      text.className =
+        'option-text';
+
+      text.innerHTML =
+        formatText(
+          question.pilihan[
+            letter
+          ] || ''
+        );
+
+
+      label.appendChild(
+        input
+      );
+
+      label.appendChild(
+        letterBox
+      );
+
+      label.appendChild(
+        text
+      );
+
 
       input.addEventListener(
         'change',
         function() {
-          saveSingleAnswer(
-            question.no,
-            letter
-          );
+
+          state.answers[
+            String(question.no)
+          ] =
+            letter;
+
+          saveExamState();
+
+          updateAnsweredCounter();
+
+          renderQuestionPalette();
         }
       );
 
-      const badge =
-        document.createElement('span');
 
-      badge.className =
-        'choice-letter';
-
-      badge.textContent =
-        letter;
-
-      const text =
-        document.createElement('span');
-
-      text.className =
-        'choice-text';
-
-      text.textContent =
-        value;
-
-      label.appendChild(input);
-      label.appendChild(badge);
-      label.appendChild(text);
-
-      container.appendChild(label);
-    });
+      container.appendChild(
+        label
+      );
+    }
+  );
 }
 
 
 /* ================================================================
-   PG KOMPLEKS
+   RENDER PGK
    ================================================================ */
 
-function renderPGKChoices(
+function renderPGKOptions(
   container,
   question
 ) {
-  const saved =
-    getSavedAnswerArray(
-      question.no
-    );
+
+  const letters =
+    ['A', 'B', 'C', 'D'];
+
+  let current =
+    state.answers[
+      String(question.no)
+    ] || [];
+
+  if (!Array.isArray(current)) {
+
+    current =
+      String(current)
+        .split('')
+        .filter(function(value) {
+          return letters.includes(
+            value
+          );
+        });
+  }
+
 
   const instruction =
-    document.createElement('div');
+    document.createElement(
+      'div'
+    );
 
   instruction.className =
-    'answer-instruction';
+    'question-instruction';
 
   instruction.innerHTML =
     '<strong>Pilihan Ganda Kompleks</strong>' +
-    '<span>Pilih semua jawaban yang benar.</span>';
+    '<span>Pilih semua jawaban yang dianggap benar.</span>';
 
   container.appendChild(
     instruction
   );
 
-  ['A', 'B', 'C', 'D']
-    .forEach(function(letter) {
 
-      const value =
-        question.pilihan?.[letter] || '';
+  letters.forEach(
+    function(letter) {
 
       const label =
-        document.createElement('label');
+        document.createElement(
+          'label'
+        );
 
       label.className =
-        'answer-option checkbox-option';
+        'answer-option';
 
-      if (
-        saved.indexOf(letter) !== -1
-      ) {
-        label.classList.add('selected');
-      }
 
       const input =
-        document.createElement('input');
+        document.createElement(
+          'input'
+        );
 
-      input.type = 'checkbox';
+      input.type =
+        'checkbox';
 
       input.name =
-        'question_' + question.no;
+        'question_' +
+        question.no;
 
       input.value =
         letter;
 
       input.checked =
-        saved.indexOf(letter) !== -1;
+        current.includes(
+          letter
+        );
+
+
+      const letterBox =
+        document.createElement(
+          'span'
+        );
+
+      letterBox.className =
+        'option-letter';
+
+      letterBox.textContent =
+        letter;
+
+
+      const text =
+        document.createElement(
+          'span'
+        );
+
+      text.className =
+        'option-text';
+
+      text.innerHTML =
+        formatText(
+          question.pilihan[
+            letter
+          ] || ''
+        );
+
+
+      label.appendChild(
+        input
+      );
+
+      label.appendChild(
+        letterBox
+      );
+
+      label.appendChild(
+        text
+      );
+
 
       input.addEventListener(
         'change',
         function() {
 
-          const selected =
-            Array.from(
-              container.querySelectorAll(
-                'input[type="checkbox"]:checked'
+          let selected =
+            state.answers[
+              String(question.no)
+            ];
+
+          if (
+            !Array.isArray(
+              selected
+            )
+          ) {
+            selected = [];
+          }
+
+          if (
+            input.checked
+          ) {
+
+            if (
+              !selected.includes(
+                letter
               )
-            ).map(
-              function(item) {
-                return item.value;
-              }
-            );
+            ) {
+              selected.push(
+                letter
+              );
+            }
+
+          } else {
+
+            selected =
+              selected.filter(
+                function(item) {
+                  return item !==
+                    letter;
+                }
+              );
+          }
 
           selected.sort();
 
           state.answers[
             String(question.no)
-          ] = selected;
+          ] =
+            selected;
 
-          label.classList.toggle(
-            'selected',
-            input.checked
-          );
+          saveExamState();
 
-          updateExamProgress();
-          updateQuestionNav();
-          saveExamToStorage();
+          updateAnsweredCounter();
+
+          renderQuestionPalette();
         }
       );
 
-      const badge =
-        document.createElement('span');
 
-      badge.className =
-        'choice-letter';
-
-      badge.textContent =
-        letter;
-
-      const text =
-        document.createElement('span');
-
-      text.className =
-        'choice-text';
-
-      text.textContent =
-        value;
-
-      label.appendChild(input);
-      label.appendChild(badge);
-      label.appendChild(text);
-
-      container.appendChild(label);
-    });
+      container.appendChild(
+        label
+      );
+    }
+  );
 }
 
 
 /* ================================================================
-   BENAR SALAH
+   RENDER BENAR / SALAH
    ================================================================ */
 
-function renderTrueFalseChoices(
+function renderBSOptions(
   container,
   question
 ) {
-  const saved =
-    String(
-      state.answers[
-        String(question.no)
-      ] || ''
-    ).toUpperCase();
+
+  const current =
+    state.answers[
+      String(question.no)
+    ] || '';
+
 
   const instruction =
-    document.createElement('div');
+    document.createElement(
+      'div'
+    );
 
   instruction.className =
-    'answer-instruction';
+    'question-instruction';
 
   instruction.innerHTML =
-    '<strong>Benar atau Salah?</strong>' +
+    '<strong>Benar / Salah</strong>' +
     '<span>Pilih salah satu jawaban.</span>';
 
   container.appendChild(
     instruction
   );
 
-  [
+
+  const options = [
     {
       value: 'BENAR',
-      label: 'Benar',
-      icon: '✓'
+      label: 'Benar'
     },
     {
       value: 'SALAH',
-      label: 'Salah',
-      icon: '✕'
+      label: 'Salah'
     }
-  ].forEach(function(item) {
+  ];
 
-    const label =
-      document.createElement('label');
 
-    label.className =
-      'answer-option true-false-option';
+  options.forEach(
+    function(option) {
 
-    if (saved === item.value) {
-      label.classList.add('selected');
-    }
-
-    const input =
-      document.createElement('input');
-
-    input.type = 'radio';
-
-    input.name =
-      'question_' + question.no;
-
-    input.value =
-      item.value;
-
-    input.checked =
-      saved === item.value;
-
-    input.addEventListener(
-      'change',
-      function() {
-        saveSingleAnswer(
-          question.no,
-          item.value
+      const label =
+        document.createElement(
+          'label'
         );
-      }
-    );
 
-    const icon =
-      document.createElement('span');
+      label.className =
+        'answer-option';
 
-    icon.className =
-      'tf-icon';
 
-    icon.textContent =
-      item.icon;
+      const input =
+        document.createElement(
+          'input'
+        );
 
-    const text =
-      document.createElement('span');
+      input.type =
+        'radio';
 
-    text.className =
-      'choice-text';
+      input.name =
+        'question_' +
+        question.no;
 
-    text.textContent =
-      item.label;
+      input.value =
+        option.value;
 
-    label.appendChild(input);
-    label.appendChild(icon);
-    label.appendChild(text);
+      input.checked =
+        current ===
+        option.value;
 
-    container.appendChild(label);
-  });
+
+      const icon =
+        document.createElement(
+          'span'
+        );
+
+      icon.className =
+        'option-icon';
+
+      icon.textContent =
+        option.value ===
+        'BENAR'
+          ? '✓'
+          : '✕';
+
+
+      const text =
+        document.createElement(
+          'span'
+        );
+
+      text.className =
+        'option-text';
+
+      text.textContent =
+        option.label;
+
+
+      label.appendChild(
+        input
+      );
+
+      label.appendChild(
+        icon
+      );
+
+      label.appendChild(
+        text
+      );
+
+
+      input.addEventListener(
+        'change',
+        function() {
+
+          state.answers[
+            String(question.no)
+          ] =
+            option.value;
+
+          saveExamState();
+
+          updateAnsweredCounter();
+
+          renderQuestionPalette();
+        }
+      );
+
+
+      container.appendChild(
+        label
+      );
+    }
+  );
 }
 
 
 /* ================================================================
-   ANSWER
+   NAVIGASI SOAL
    ================================================================ */
 
-function saveSingleAnswer(
-  questionNumber,
-  answer
-) {
-  state.answers[
-    String(questionNumber)
-  ] = answer;
+function nextQuestion() {
 
-  updateExamProgress();
-  updateQuestionNav();
+  if (
+    state.currentQuestion >=
+    state.questions.length - 1
+  ) {
 
-  saveExamToStorage();
-}
+    showSubmitConfirmation();
 
-
-function getSavedAnswerArray(
-  questionNumber
-) {
-  const answer =
-    state.answers[
-      String(questionNumber)
-    ];
-
-  if (Array.isArray(answer)) {
-    return answer.slice();
-  }
-
-  if (!answer) {
-    return [];
-  }
-
-  return String(answer)
-    .split('')
-    .filter(function(item) {
-      return /^[ABCD]$/.test(item);
-    });
-}
-
-
-/* ================================================================
-   QUESTION NAVIGATION
-   ================================================================ */
-
-function renderQuestionNav() {
-  if (!DOM.questionNav) {
     return;
   }
 
-  DOM.questionNav.innerHTML = '';
+  state.currentQuestion++;
+
+  renderExam();
+
+  scrollExamToTop();
+}
+
+
+function previousQuestion() {
+
+  if (
+    state.currentQuestion <= 0
+  ) {
+    return;
+  }
+
+  state.currentQuestion--;
+
+  renderExam();
+
+  scrollExamToTop();
+}
+
+
+/* ================================================================
+   PALETTE SOAL
+   ================================================================ */
+
+function renderQuestionPalette() {
+
+  const container =
+    $('#questionPalette');
+
+  if (!container) {
+    return;
+  }
+
+  container.innerHTML =
+    '';
+
 
   state.questions.forEach(
     function(question, index) {
 
       const button =
-        document.createElement('button');
+        document.createElement(
+          'button'
+        );
 
-      button.type = 'button';
+      button.type =
+        'button';
 
       button.className =
-        'question-nav-item';
+        'question-number';
 
       button.textContent =
         question.no;
 
-      button.dataset.index =
-        index;
+
+      if (
+        index ===
+        state.currentQuestion
+      ) {
+        button.classList.add(
+          'active'
+        );
+      }
+
+
+      if (
+        isQuestionAnswered(
+          question
+        )
+      ) {
+        button.classList.add(
+          'answered'
+        );
+      }
+
 
       button.addEventListener(
         'click',
         function() {
-          goToQuestion(index);
+
+          state.currentQuestion =
+            index;
+
+          renderExam();
+
+          scrollExamToTop();
         }
       );
 
-      DOM.questionNav.appendChild(
+
+      container.appendChild(
         button
       );
     }
   );
-
-  updateQuestionNav();
 }
 
 
-function updateQuestionNav() {
-  if (!DOM.questionNav) {
+/* ================================================================
+   ANSWER STATUS
+   ================================================================ */
+
+function isQuestionAnswered(
+  question
+) {
+
+  const answer =
+    state.answers[
+      String(question.no)
+    ];
+
+
+  if (
+    answer === undefined ||
+    answer === null
+  ) {
+    return false;
+  }
+
+
+  if (
+    Array.isArray(answer)
+  ) {
+    return answer.length > 0;
+  }
+
+
+  return String(
+    answer
+  ).trim() !== '';
+}
+
+
+function getAnsweredCount() {
+
+  return state.questions
+    .filter(
+      isQuestionAnswered
+    )
+    .length;
+}
+
+
+function updateAnsweredCounter() {
+
+  const answered =
+    getAnsweredCount();
+
+  setText(
+    '#answeredCount',
+    answered
+  );
+
+  setText(
+    '#unansweredCount',
+    state.questions.length -
+      answered
+  );
+}
+
+
+/* ================================================================
+   NAVIGATION BUTTON
+   ================================================================ */
+
+function updateNavigationButtons() {
+
+  const previous =
+    $('#btnPrevious');
+
+  const next =
+    $('#btnNext');
+
+  const submit =
+    $('#btnSubmitExam');
+
+
+  if (previous) {
+
+    previous.disabled =
+      state.currentQuestion <= 0;
+  }
+
+
+  const last =
+    state.currentQuestion >=
+    state.questions.length - 1;
+
+
+  if (next) {
+
+    next.style.display =
+      last
+        ? 'none'
+        : '';
+  }
+
+
+  if (submit) {
+
+    submit.style.display =
+      last
+        ? ''
+        : 'none';
+  }
+}
+
+
+/* ================================================================
+   TIMER
+   ================================================================ */
+
+function startTimer() {
+
+  stopTimer();
+
+  updateTimerDisplay();
+
+
+  state.timerInterval =
+    setInterval(
+      function() {
+
+        if (
+          state.remainingSeconds <=
+          0
+        ) {
+
+          stopTimer();
+
+          autoSubmitExam();
+
+          return;
+        }
+
+
+        state.remainingSeconds--;
+
+        updateTimerDisplay();
+
+        saveExamState();
+
+      },
+      1000
+    );
+}
+
+
+function stopTimer() {
+
+  if (
+    state.timerInterval
+  ) {
+
+    clearInterval(
+      state.timerInterval
+    );
+
+    state.timerInterval =
+      null;
+  }
+}
+
+
+function updateTimerDisplay() {
+
+  const total =
+    Math.max(
+      0,
+      state.remainingSeconds
+    );
+
+
+  const minutes =
+    Math.floor(
+      total / 60
+    );
+
+  const seconds =
+    total % 60;
+
+
+  const text =
+    String(minutes).padStart(
+      2,
+      '0'
+    ) +
+    ':' +
+    String(seconds).padStart(
+      2,
+      '0'
+    );
+
+
+  setText(
+    '#examTimer',
+    text
+  );
+
+
+  const timer =
+    $('#examTimer');
+
+  if (!timer) {
     return;
   }
 
-  const buttons =
-    DOM.questionNav.querySelectorAll(
-      '.question-nav-item'
-    );
 
-  buttons.forEach(
-    function(button, index) {
+  timer.classList.toggle(
+    'warning',
+    total <= 300
+  );
 
-      const question =
-        state.questions[index];
+  timer.classList.toggle(
+    'danger',
+    total <= 60
+  );
+}
 
-      const answer =
-        state.answers[
-          String(question.no)
-        ];
 
-      button.classList.toggle(
-        'active',
-        index === state.currentQuestion
-      );
+/* ================================================================
+   SUBMIT CONFIRMATION
+   ================================================================ */
 
-      button.classList.toggle(
-        'answered',
-        hasAnswer(answer)
-      );
+function confirmSubmitExam() {
+
+  showSubmitConfirmation();
+}
+
+
+function showSubmitConfirmation() {
+
+  const answered =
+    getAnsweredCount();
+
+  const total =
+    state.questions.length;
+
+  const unanswered =
+    total - answered;
+
+
+  let message =
+    'Kamu sudah menjawab ' +
+    answered +
+    ' dari ' +
+    total +
+    ' soal.';
+
+
+  if (
+    unanswered > 0
+  ) {
+
+    message +=
+      '<br><br>' +
+      '<strong>' +
+      unanswered +
+      ' soal belum dijawab.</strong>' +
+      '<br>' +
+      'Apakah kamu yakin ingin mengirim ujian?';
+
+  } else {
+
+    message +=
+      '<br><br>' +
+      'Semua soal sudah dijawab.' +
+      '<br>' +
+      'Yakin ingin mengirim ujian?';
+  }
+
+
+  showConfirmModal(
+    'Kirim Ujian?',
+    message,
+    submitExam
+  );
+}
+
+
+/* ================================================================
+   AUTO SUBMIT
+   ================================================================ */
+
+function autoSubmitExam() {
+
+  if (
+    state.examSubmitted
+  ) {
+    return;
+  }
+
+
+  showAlertModal(
+    'Waktu Habis',
+    'Waktu ujian telah habis. Jawaban akan dikirim secara otomatis.',
+    function() {
+      submitExam();
     }
   );
 }
 
 
-function updateQuestionNavActive() {
-  updateQuestionNav();
-}
+/* ================================================================
+   SUBMIT EXAM
+   ================================================================ */
 
+async function submitExam() {
 
-function goToQuestion(index) {
   if (
-    index < 0 ||
-    index >= state.questions.length
+    state.examSubmitted
   ) {
     return;
   }
 
-  state.currentQuestion =
-    index;
 
-  renderCurrentQuestion();
+  state.examSubmitted =
+    true;
 
-  updateExamProgress();
+  stopTimer();
 
-  const examTop =
-    document.getElementById(
-      'examTop'
-    );
+  saveExamState();
 
-  if (examTop) {
-    examTop.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start'
-    });
-  }
-}
-
-
-/* ================================================================
-   NAVIGATION BUTTONS
-   ================================================================ */
-
-function updateNavigationButtons() {
-  if (DOM.prevQuestion) {
-    DOM.prevQuestion.disabled =
-      state.currentQuestion === 0;
-  }
-
-  const last =
-    state.questions.length - 1;
-
-  if (DOM.nextQuestion) {
-    DOM.nextQuestion.disabled =
-      state.currentQuestion >= last;
-  }
-
-  if (DOM.submitExam) {
-    DOM.submitExam.classList.toggle(
-      'hidden',
-      state.currentQuestion !== last
-    );
-  }
-}
-
-
-/* ================================================================
-   PROGRESS
-   ================================================================ */
-
-function updateExamProgress() {
-  const total =
-    state.questions.length;
-
-  const answered =
-    state.questions.filter(
-      function(question) {
-        return hasAnswer(
-          state.answers[
-            String(question.no)
-          ]
-        );
-      }
-    ).length;
-
-  const percentage =
-    total
-      ? Math.round(
-          (answered / total) * 100
-        )
-      : 0;
-
-  if (DOM.questionProgress) {
-    DOM.questionProgress.textContent =
-      answered +
-      ' / ' +
-      total +
-      ' dijawab';
-  }
-
-  if (DOM.progressBar) {
-    DOM.progressBar.style.width =
-      percentage + '%';
-  }
-}
-
-
-/* ================================================================
-   ANSWER CHECK
-   ================================================================ */
-
-function hasAnswer(answer) {
-  if (Array.isArray(answer)) {
-    return answer.length > 0;
-  }
-
-  return (
-    answer !== undefined &&
-    answer !== null &&
-    String(answer).trim() !== ''
+  showLoading(
+    'Mengirim jawaban ujian...'
   );
-}
 
-
-/* ================================================================
-   SUBMIT
-   ================================================================ */
-
-function openSubmitConfirmation() {
-  const total =
-    state.questions.length;
-
-  const answered =
-    state.questions.filter(
-      function(question) {
-        return hasAnswer(
-          state.answers[
-            String(question.no)
-          ]
-        );
-      }
-    ).length;
-
-  const unanswered =
-    total - answered;
-
-  if (unanswered > 0) {
-    DOM.confirmMessage.innerHTML =
-      '<strong>Masih ada ' +
-      unanswered +
-      ' soal yang belum dijawab.</strong>' +
-      '<br><br>' +
-      'Apakah kamu tetap ingin mengirim ujian?';
-  } else {
-    DOM.confirmMessage.innerHTML =
-      '<strong>Semua soal sudah dijawab.</strong>' +
-      '<br><br>' +
-      'Yakin ingin mengirim jawaban sekarang?';
-  }
-
-  DOM.confirmModal.classList.add(
-    'show'
-  );
-}
-
-
-function closeConfirmModal() {
-  DOM.confirmModal.classList.remove(
-    'show'
-  );
-}
-
-
-/* ================================================================
-   SUBMIT EXAM API
-   ================================================================ */
-
-async function submitExam() {
-  if (state.submitted) {
-    return;
-  }
-
-  closeConfirmModal();
 
   try {
-    setLoading(
-      true,
-      'Menyimpan jawaban ujian...'
-    );
 
     const payload = {
-      nama: state.student.nama,
 
-      kelas: state.student.kelas,
+      nama:
+        state.nama,
+
+      kelas:
+        state.kelas,
 
       tanggal:
-        convertDateToBackend(
-          state.student.tanggal
-        ),
+        state.tanggal,
 
       submissionId:
         state.submissionId,
@@ -1718,906 +1978,349 @@ async function submitExam() {
         state.answers
     };
 
+
     const data =
       await apiPost(
         'submitExam',
         payload
       );
 
-    if (!data.success) {
+
+    if (
+      !data ||
+      !data.success
+    ) {
+
       throw new Error(
-        data.error ||
-        'Ujian gagal dikirim.'
+        data &&
+        data.error
+          ? data.error
+          : 'Ujian gagal disimpan.'
       );
     }
 
-    state.submitted = true;
 
-    clearExamStorage();
+    state.lastResult =
+      data.result;
 
-    showResult(
+
+    state.examSubmitted =
+      true;
+
+    state.examStarted =
+      false;
+
+
+    stopTimer();
+
+    clearSavedExamState();
+
+
+    showResultPage(
       data.result,
       data.duplicate
     );
 
-    showView('result');
 
   } catch (error) {
-    console.error(error);
 
-    showToast(
-      error.message ||
-      'Ujian gagal dikirim.',
-      'error'
+    /*
+     * Jika server gagal,
+     * izinkan submit ulang.
+     */
+    state.examSubmitted =
+      false;
+
+    saveExamState();
+
+
+    showError(
+      'Ujian belum berhasil dikirim. ' +
+      getErrorMessage(error)
     );
 
   } finally {
-    setLoading(false);
+
+    hideLoading();
   }
 }
 
 
 /* ================================================================
-   RESULT
+   RESULT PAGE
    ================================================================ */
 
-function showResult(
+function showResultPage(
   result,
   duplicate
 ) {
+
   if (!result) {
     return;
   }
 
-  DOM.resultId.textContent =
-    result.idUjian || '-';
 
-  DOM.resultName.textContent =
-    result.nama || '-';
+  setText(
+    '#resultExamId',
+    result.idUjian
+  );
 
-  DOM.resultClass.textContent =
-    result.kelas || '-';
+  setText(
+    '#resultName',
+    result.nama
+  );
 
-  DOM.resultCorrect.textContent =
-    result.benar ?? 0;
+  setText(
+    '#resultClass',
+    result.kelas
+  );
 
-  DOM.resultWrong.textContent =
-    result.salah ?? 0;
+  setText(
+    '#resultDate',
+    result.tanggal
+  );
 
-  DOM.resultScore.textContent =
+  setText(
+    '#resultTotal',
+    result.totalSoal
+  );
+
+  setText(
+    '#resultCorrect',
+    result.benar
+  );
+
+  setText(
+    '#resultWrong',
+    result.salah
+  );
+
+  setText(
+    '#resultScore',
     formatScore(
       result.nilai
-    );
-
-  DOM.resultStatus.textContent =
-    result.status || 'SELESAI';
-
-  const resultBadge =
-    document.getElementById(
-      'resultBadge'
-    );
-
-  if (resultBadge) {
-    resultBadge.textContent =
-      duplicate
-        ? '✓ Sudah tersimpan'
-        : '✓ Ujian selesai';
-  }
-}
-
-
-/* ================================================================
-   ADMIN LOGIN
-   ================================================================ */
-
-async function handleAdminLogin(event) {
-  event.preventDefault();
-
-  const pin =
-    DOM.adminPin.value.trim();
-
-  if (!pin) {
-    showToast(
-      'PIN Admin wajib diisi.',
-      'warning'
-    );
-
-    DOM.adminPin.focus();
-
-    return;
-  }
-
-  try {
-    setLoading(
-      true,
-      'Memverifikasi PIN Admin...'
-    );
-
-    const data =
-      await apiPost(
-        'adminAuth',
-        {
-          pin: pin
-        }
-      );
-
-    if (!data.success) {
-      throw new Error(
-        data.error ||
-        'Login Admin gagal.'
-      );
-    }
-
-    if (!data.token) {
-      throw new Error(
-        'Token Admin tidak diterima.'
-      );
-    }
-
-    state.admin.token =
-      data.token;
-
-    state.admin.loggedIn =
-      true;
-
-    sessionStorage.setItem(
-      CONFIG.STORAGE_KEYS.ADMIN_TOKEN,
-      data.token
-    );
-
-    DOM.adminPin.value = '';
-
-    showToast(
-      'Login Admin berhasil.',
-      'success'
-    );
-
-    showView('admin');
-
-    await loadAdminDashboard();
-
-  } catch (error) {
-    console.error(error);
-
-    showToast(
-      error.message ||
-      'Login Admin gagal.',
-      'error'
-    );
-
-  } finally {
-    setLoading(false);
-  }
-}
-
-
-/* ================================================================
-   ADMIN SESSION
-   ================================================================ */
-
-function restoreAdminSession() {
-  const token =
-    sessionStorage.getItem(
-      CONFIG.STORAGE_KEYS.ADMIN_TOKEN
-    );
-
-  if (!token) {
-    return;
-  }
-
-  state.admin.token =
-    token;
-
-  state.admin.loggedIn =
-    true;
-}
-
-
-function logoutAdmin() {
-  state.admin.token = '';
-  state.admin.loggedIn = false;
-
-  sessionStorage.removeItem(
-    CONFIG.STORAGE_KEYS.ADMIN_TOKEN
+    )
   );
 
-  showToast(
-    'Kamu telah keluar dari Admin.',
-    'success'
+  setText(
+    '#resultStatus',
+    result.status ||
+      'SELESAI'
   );
 
-  showView('landing');
-}
+
+  const score =
+    Number(result.nilai) || 0;
 
 
-/* ================================================================
-   ADMIN DASHBOARD
-   ================================================================ */
+  const scoreElement =
+    $('#resultScore');
 
-async function loadAdminDashboard() {
-  if (!state.admin.loggedIn) {
-    showView('adminLogin');
-    return;
-  }
+  if (scoreElement) {
 
-  DOM.adminLoginPanel?.classList.add(
-    'hidden'
-  );
-
-  DOM.adminDashboard?.classList.remove(
-    'hidden'
-  );
-
-  await Promise.all([
-    loadAdminResults(),
-    loadStatistics(),
-    loadClassStatistics()
-  ]);
-}
-
-
-/* ================================================================
-   ADMIN RESULTS
-   ================================================================ */
-
-async function loadAdminResults() {
-  if (!state.admin.loggedIn) {
-    return;
-  }
-
-  try {
-    setLoading(
-      true,
-      'Memuat hasil ujian...'
+    scoreElement.classList.remove(
+      'excellent',
+      'good',
+      'fair',
+      'low'
     );
 
-    const params = {
-      token:
-        state.admin.token,
 
-      kelas:
-        DOM.filterClass?.value || 'SEMUA',
+    if (score >= 90) {
 
-      tanggal:
-        DOM.filterDate?.value || '',
-
-      nama:
-        DOM.filterName?.value || '',
-
-      nilaiMin:
-        DOM.filterMin?.value || '',
-
-      nilaiMax:
-        DOM.filterMax?.value || ''
-    };
-
-    const data =
-      await apiGet(
-        'getAdminResults',
-        params
+      scoreElement.classList.add(
+        'excellent'
       );
 
-    if (
-      data.unauthorized
+    } else if (
+      score >= 80
     ) {
-      handleAdminUnauthorized();
-      return;
-    }
 
-    if (!data.success) {
-      throw new Error(
-        data.error ||
-        'Hasil ujian gagal dimuat.'
-      );
-    }
-
-    state.results =
-      Array.isArray(data.results)
-        ? data.results
-        : [];
-
-    renderAdminResults();
-
-  } catch (error) {
-    console.error(error);
-
-    showToast(
-      error.message ||
-      'Gagal memuat hasil.',
-      'error'
-    );
-
-  } finally {
-    setLoading(false);
-  }
-}
-
-
-/* ================================================================
-   ADMIN RESULTS TABLE
-   ================================================================ */
-
-function renderAdminResults() {
-  if (!DOM.adminResultsBody) {
-    return;
-  }
-
-  DOM.adminResultsBody.innerHTML = '';
-
-  if (!state.results.length) {
-    const row =
-      document.createElement('tr');
-
-    row.innerHTML =
-      '<td colspan="10" class="empty-table">' +
-      'Belum ada hasil yang sesuai dengan filter.' +
-      '</td>';
-
-    DOM.adminResultsBody.appendChild(
-      row
-    );
-
-    return;
-  }
-
-  state.results.forEach(
-    function(result, index) {
-
-      const row =
-        document.createElement('tr');
-
-      row.innerHTML = `
-        <td>${index + 1}</td>
-        <td>
-          <strong>${escapeHTML(
-            result.idUjian
-          )}</strong>
-        </td>
-        <td>${escapeHTML(
-          result.tanggal || '-'
-        )}</td>
-        <td class="student-name-cell">
-          ${escapeHTML(
-            result.nama || '-'
-          )}
-        </td>
-        <td>
-          <span class="class-badge">
-            ${escapeHTML(
-              result.kelas || '-'
-            )}
-          </span>
-        </td>
-        <td>${result.totalSoal ?? 0}</td>
-        <td class="correct-cell">
-          ${result.benar ?? 0}
-        </td>
-        <td class="wrong-cell">
-          ${result.salah ?? 0}
-        </td>
-        <td>
-          <span class="score-badge ${getScoreClass(
-            result.nilai
-          )}">
-            ${formatScore(
-              result.nilai
-            )}
-          </span>
-        </td>
-        <td>
-          <span class="status-badge">
-            ${escapeHTML(
-              result.status || '-'
-            )}
-          </span>
-        </td>
-      `;
-
-      DOM.adminResultsBody.appendChild(
-        row
-      );
-    }
-  );
-}
-
-
-/* ================================================================
-   STATISTICS
-   ================================================================ */
-
-async function loadStatistics() {
-  if (!state.admin.loggedIn) {
-    return;
-  }
-
-  try {
-    const params = {
-      token:
-        state.admin.token,
-
-      kelas:
-        DOM.filterClass?.value || 'SEMUA',
-
-      tanggal:
-        DOM.filterDate?.value || '',
-
-      nama:
-        DOM.filterName?.value || '',
-
-      nilaiMin:
-        DOM.filterMin?.value || '',
-
-      nilaiMax:
-        DOM.filterMax?.value || ''
-    };
-
-    const data =
-      await apiGet(
-        'getStatistics',
-        params
+      scoreElement.classList.add(
+        'good'
       );
 
-    if (
-      data.unauthorized
+    } else if (
+      score >= 70
     ) {
-      handleAdminUnauthorized();
-      return;
-    }
 
-    if (!data.success) {
-      throw new Error(
-        data.error ||
-        'Statistik gagal dimuat.'
+      scoreElement.classList.add(
+        'fair'
+      );
+
+    } else {
+
+      scoreElement.classList.add(
+        'low'
       );
     }
-
-    state.statistics =
-      data.statistics;
-
-    renderStatistics();
-
-  } catch (error) {
-    console.error(error);
-
-    showToast(
-      error.message ||
-      'Statistik gagal dimuat.',
-      'error'
-    );
-  }
-}
-
-
-function renderStatistics() {
-  const stats =
-    state.statistics;
-
-  if (!stats) {
-    return;
   }
 
-  if (DOM.adminTotal) {
-    DOM.adminTotal.textContent =
-      stats.totalPeserta ?? 0;
-  }
 
-  if (DOM.adminAverage) {
-    DOM.adminAverage.textContent =
-      formatScore(
-        stats.rataRata
-      );
-  }
-
-  if (DOM.adminHighest) {
-    DOM.adminHighest.textContent =
-      formatScore(
-        stats.nilaiTertinggi
-      );
-  }
-
-  if (DOM.adminLowest) {
-    DOM.adminLowest.textContent =
-      formatScore(
-        stats.nilaiTerendah
-      );
-  }
-}
-
-
-/* ================================================================
-   CLASS STATISTICS
-   ================================================================ */
-
-async function loadClassStatistics() {
-  if (!state.admin.loggedIn) {
-    return;
-  }
-
-  try {
-    const data =
-      await apiGet(
-        'getClassStatistics',
-        {
-          token:
-            state.admin.token,
-
-          tanggal:
-            DOM.filterDate?.value || ''
-        }
-      );
-
-    if (
-      data.unauthorized
-    ) {
-      handleAdminUnauthorized();
-      return;
-    }
-
-    if (!data.success) {
-      throw new Error(
-        data.error ||
-        'Statistik kelas gagal dimuat.'
-      );
-    }
-
-    state.classStatistics =
-      Array.isArray(data.statistics)
-        ? data.statistics
-        : [];
-
-    renderClassStatistics();
-
-  } catch (error) {
-    console.error(error);
-
-    showToast(
-      error.message ||
-      'Statistik kelas gagal dimuat.',
-      'error'
-    );
-  }
-}
-
-
-function renderClassStatistics() {
-  if (!DOM.classStatisticsBody) {
-    return;
-  }
-
-  DOM.classStatisticsBody.innerHTML = '';
-
-  state.classStatistics.forEach(
-    function(item) {
-
-      const row =
-        document.createElement('tr');
-
-      row.innerHTML = `
-        <td>
-          <span class="class-badge">
-            ${escapeHTML(
-              item.kelas || '-'
-            )}
-          </span>
-        </td>
-
-        <td>
-          ${item.peserta ?? 0}
-        </td>
-
-        <td>
-          ${formatScore(
-            item.rataRata
-          )}
-        </td>
-
-        <td>
-          ${formatScore(
-            item.tertinggi
-          )}
-        </td>
-
-        <td>
-          ${formatScore(
-            item.terendah
-          )}
-        </td>
-      `;
-
-      DOM.classStatisticsBody.appendChild(
-        row
-      );
-    }
+  showPage(
+    'resultPage'
   );
 }
 
 
 /* ================================================================
-   SEARCH EXAM
+   RESET UJIAN
    ================================================================ */
 
-async function searchExamResult() {
-  const id =
-    DOM.examIdSearch.value.trim();
+function resetAndBackToStart() {
 
-  if (!id) {
-    showToast(
-      'Masukkan ID ujian.',
-      'warning'
-    );
+  showConfirmModal(
+    'Kembali?',
+    'Data ujian yang sedang tersimpan di perangkat akan dihapus.',
+    function() {
 
-    DOM.examIdSearch.focus();
+      stopTimer();
 
-    return;
-  }
+      state.questions =
+        [];
 
-  try {
-    setLoading(
-      true,
-      'Mencari hasil ujian...'
-    );
+      state.answers =
+        {};
 
-    const data =
-      await apiGet(
-        'getExamResult',
-        {
-          idUjian: id
-        }
-      );
+      state.currentQuestion =
+        0;
 
-    if (!data.success) {
-      throw new Error(
-        data.error ||
-        'Hasil ujian tidak ditemukan.'
-      );
-    }
+      state.nama =
+        '';
 
-    renderExamSearchResult(
-      data.result
-    );
+      state.kelas =
+        '';
 
-  } catch (error) {
-    console.error(error);
+      state.examStarted =
+        false;
 
-    DOM.examIdResult.innerHTML =
-      '<div class="search-empty error-state">' +
-      escapeHTML(
-        error.message ||
-        'Hasil tidak ditemukan.'
-      ) +
-      '</div>';
+      state.examSubmitted =
+        false;
 
-  } finally {
-    setLoading(false);
-  }
-}
+      state.remainingSeconds =
+        CONFIG.DURASI_UJIAN * 60;
 
+      clearSavedExamState();
 
-function renderExamSearchResult(
-  result
-) {
-  if (!DOM.examIdResult) {
-    return;
-  }
+      generateSubmissionId();
 
-  DOM.examIdResult.innerHTML = `
-    <div class="search-result-card">
-      <div class="search-result-header">
-        <span>ID Ujian</span>
-        <strong>${escapeHTML(
-          result.idUjian || '-'
-        )}</strong>
-      </div>
+      const name =
+        $('#nama');
 
-      <div class="search-result-grid">
+      const kelas =
+        $('#kelas');
 
-        <div>
-          <small>Nama</small>
-          <strong>${escapeHTML(
-            result.nama || '-'
-          )}</strong>
-        </div>
-
-        <div>
-          <small>Kelas</small>
-          <strong>${escapeHTML(
-            result.kelas || '-'
-          )}</strong>
-        </div>
-
-        <div>
-          <small>Tanggal</small>
-          <strong>${escapeHTML(
-            result.tanggal || '-'
-          )}</strong>
-        </div>
-
-        <div>
-          <small>Benar</small>
-          <strong>${result.benar ?? 0}</strong>
-        </div>
-
-        <div>
-          <small>Salah</small>
-          <strong>${result.salah ?? 0}</strong>
-        </div>
-
-        <div>
-          <small>Nilai</small>
-          <strong class="big-score">
-            ${formatScore(
-              result.nilai
-            )}
-          </strong>
-        </div>
-
-      </div>
-    </div>
-  `;
-}
-
-
-/* ================================================================
-   ADMIN FILTER
-   ================================================================ */
-
-function resetAdminFilters() {
-  if (DOM.filterClass) {
-    DOM.filterClass.value =
-      'SEMUA';
-  }
-
-  if (DOM.filterDate) {
-    DOM.filterDate.value =
-      '';
-  }
-
-  if (DOM.filterName) {
-    DOM.filterName.value =
-      '';
-  }
-
-  if (DOM.filterMin) {
-    DOM.filterMin.value =
-      '';
-  }
-
-  if (DOM.filterMax) {
-    DOM.filterMax.value =
-      '';
-  }
-
-  loadAdminDashboard();
-}
-
-
-function handleAdminUnauthorized() {
-  state.admin.token = '';
-  state.admin.loggedIn = false;
-
-  sessionStorage.removeItem(
-    CONFIG.STORAGE_KEYS.ADMIN_TOKEN
-  );
-
-  showToast(
-    'Sesi Admin telah berakhir. Silakan login kembali.',
-    'warning'
-  );
-
-  showView('adminLogin');
-}
-
-
-/* ================================================================
-   VIEW
-   ================================================================ */
-
-function showView(view) {
-  const views = {
-    landing:
-      DOM.landingView,
-
-    student:
-      DOM.studentView,
-
-    exam:
-      DOM.examView,
-
-    result:
-      DOM.resultView,
-
-    adminLogin:
-      DOM.adminLoginPanel,
-
-    admin:
-      DOM.adminView
-  };
-
-  Object.keys(views).forEach(
-    function(key) {
-      const element =
-        views[key];
-
-      if (!element) {
-        return;
+      if (name) {
+        name.value = '';
       }
 
-      element.classList.toggle(
-        'active-view',
-        key === view
-      );
+      if (kelas) {
+        kelas.value = '';
+      }
 
-      element.classList.toggle(
-        'hidden',
-        key !== view
+      showPage(
+        'startPage'
       );
     }
   );
-
-  window.scrollTo({
-    top: 0,
-    behavior: 'smooth'
-  });
 }
 
 
 /* ================================================================
-   STORAGE
+   LOCAL STORAGE
    ================================================================ */
 
-function saveExamToStorage() {
+function saveExamState() {
+
+  if (
+    !state.examStarted
+  ) {
+    return;
+  }
+
+
+  const data = {
+
+    nama:
+      state.nama,
+
+    kelas:
+      state.kelas,
+
+    tanggal:
+      state.tanggal,
+
+    submissionId:
+      state.submissionId,
+
+    answers:
+      state.answers,
+
+    currentQuestion:
+      state.currentQuestion,
+
+    remainingSeconds:
+      state.remainingSeconds,
+
+    examStarted:
+      state.examStarted
+  };
+
+
   try {
-    const data = {
-      student:
-        state.student,
 
-      answers:
-        state.answers,
-
-      currentQuestion:
-        state.currentQuestion,
-
-      submissionId:
-        state.submissionId
-    };
-
-    sessionStorage.setItem(
-      CONFIG.STORAGE_KEYS.EXAM,
+    localStorage.setItem(
+      CONFIG.STORAGE_KEY,
       JSON.stringify(data)
     );
+
   } catch (error) {
+
     console.warn(
-      'Gagal menyimpan sesi ujian.',
+      'Gagal menyimpan state ujian:',
       error
     );
   }
 }
 
 
-function restoreExamFromStorage() {
+function restoreExamState() {
+
   try {
+
     const raw =
-      sessionStorage.getItem(
-        CONFIG.STORAGE_KEYS.EXAM
+      localStorage.getItem(
+        CONFIG.STORAGE_KEY
       );
 
     if (!raw) {
       return false;
     }
 
+
     const data =
       JSON.parse(raw);
 
+
     if (
       !data ||
-      !data.student ||
-      !data.submissionId
+      !data.examStarted
     ) {
       return false;
     }
 
-    state.student =
-      data.student;
+
+    state.nama =
+      data.nama || '';
+
+    state.kelas =
+      data.kelas || '';
+
+    state.tanggal =
+      data.tanggal || '';
+
+    state.submissionId =
+      data.submissionId || '';
 
     state.answers =
       data.answers || {};
@@ -2627,81 +2330,1605 @@ function restoreExamFromStorage() {
         data.currentQuestion
       ) || 0;
 
-    state.submissionId =
-      data.submissionId;
+    state.remainingSeconds =
+      Number(
+        data.remainingSeconds
+      ) ||
+      CONFIG.DURASI_UJIAN * 60;
+
+    state.examStarted =
+      true;
+
+
+    if (
+      !state.submissionId
+    ) {
+      generateSubmissionId();
+    }
+
 
     return true;
 
   } catch (error) {
+
     console.warn(
-      'Sesi ujian tidak dapat dipulihkan.',
+      'State ujian rusak:',
       error
     );
+
+    clearSavedExamState();
 
     return false;
   }
 }
 
 
-function clearExamStorage() {
+function clearSavedExamState() {
+
+  try {
+
+    localStorage.removeItem(
+      CONFIG.STORAGE_KEY
+    );
+
+  } catch (error) {
+    console.warn(error);
+  }
+}
+
+
+/* ================================================================
+   SUBMISSION ID
+   ================================================================ */
+
+function generateSubmissionId() {
+
+  let existing = '';
+
+  try {
+
+    existing =
+      localStorage.getItem(
+        CONFIG.SUBMISSION_KEY
+      ) || '';
+
+  } catch (error) {
+    console.warn(error);
+  }
+
+
+  if (existing) {
+
+    state.submissionId =
+      existing;
+
+    return;
+  }
+
+
+  const random =
+    Math.random()
+      .toString(36)
+      .substring(2, 10);
+
+
+  const timestamp =
+    Date.now()
+      .toString(36);
+
+
+  const id =
+    'SUB-' +
+    timestamp +
+    '-' +
+    random;
+
+
+  state.submissionId =
+    id;
+
+
+  try {
+
+    localStorage.setItem(
+      CONFIG.SUBMISSION_KEY,
+      id
+    );
+
+  } catch (error) {
+    console.warn(error);
+  }
+}
+
+
+/* ================================================================
+   ADMIN LOGIN
+   ================================================================ */
+
+async function adminLogin() {
+
+  const pinInput =
+    $('#adminPin');
+
+  const pin =
+    pinInput
+      ? pinInput.value.trim()
+      : '';
+
+
+  if (!pin) {
+
+    showError(
+      'PIN Admin wajib diisi.'
+    );
+
+    if (pinInput) {
+      pinInput.focus();
+    }
+
+    return;
+  }
+
+
+  showLoading(
+    'Memverifikasi PIN Admin...'
+  );
+
+
+  try {
+
+    const data =
+      await apiPost(
+        'adminAuth',
+        {
+          pin: pin
+        }
+      );
+
+
+    if (
+      !data ||
+      !data.success
+    ) {
+
+      throw new Error(
+        data &&
+        data.error
+          ? data.error
+          : 'Login Admin gagal.'
+      );
+    }
+
+
+    state.adminToken =
+      data.token;
+
+
+    sessionStorage.setItem(
+      CONFIG.ADMIN_TOKEN_KEY,
+      data.token
+    );
+
+
+    if (pinInput) {
+      pinInput.value = '';
+    }
+
+
+    showPage(
+      'adminPage'
+    );
+
+
+    await loadAdminDashboard();
+
+    await loadAdminStatistics();
+
+    await loadClassStatistics();
+
+
+  } catch (error) {
+
+    showError(
+      getErrorMessage(error)
+    );
+
+  } finally {
+
+    hideLoading();
+  }
+}
+
+
+/* ================================================================
+   ADMIN LOGOUT
+   ================================================================ */
+
+function adminLogout() {
+
+  state.adminToken =
+    '';
+
+  state.adminResults =
+    [];
+
   sessionStorage.removeItem(
-    CONFIG.STORAGE_KEYS.EXAM
+    CONFIG.ADMIN_TOKEN_KEY
+  );
+
+  showPage(
+    'adminLoginPage'
   );
 }
 
 
 /* ================================================================
-   KEYBOARD
+   ADMIN DASHBOARD
    ================================================================ */
 
-function handleKeyboardNavigation(event) {
+async function loadAdminDashboard() {
+
   if (
-    !DOM.examView ||
-    DOM.examView.classList.contains('hidden')
+    !state.adminToken
+  ) {
+
+    showPage(
+      'adminLoginPage'
+    );
+
+    return;
+  }
+
+
+  const params = {
+
+    token:
+      state.adminToken,
+
+    kelas:
+      getValue(
+        '#filterKelas'
+      ),
+
+    tanggal:
+      getValue(
+        '#filterTanggal'
+      ),
+
+    nama:
+      getValue(
+        '#filterNama'
+      ),
+
+    nilaiMin:
+      getValue(
+        '#filterNilaiMin'
+      ),
+
+    nilaiMax:
+      getValue(
+        '#filterNilaiMax'
+      )
+  };
+
+
+  showAdminTableLoading();
+
+
+  try {
+
+    const data =
+      await apiGet(
+        'getAdminResults',
+        params
+      );
+
+
+    if (
+      data &&
+      data.unauthorized
+    ) {
+
+      adminLogout();
+
+      showError(
+        'Sesi Admin telah berakhir. Silakan login kembali.'
+      );
+
+      return;
+    }
+
+
+    if (
+      !data ||
+      !data.success
+    ) {
+
+      throw new Error(
+        data &&
+        data.error
+          ? data.error
+          : 'Data hasil gagal dimuat.'
+      );
+    }
+
+
+    state.adminResults =
+      Array.isArray(
+        data.results
+      )
+        ? data.results
+        : [];
+
+
+    state.currentAdminPage =
+      1;
+
+
+    renderAdminResults();
+
+    updateAdminResultCount();
+
+
+  } catch (error) {
+
+    showError(
+      getErrorMessage(error)
+    );
+
+  } finally {
+
+    hideAdminTableLoading();
+  }
+}
+
+
+/* ================================================================
+   RENDER ADMIN RESULTS
+   ================================================================ */
+
+function renderAdminResults() {
+
+  const tbody =
+    $('#adminResultsBody');
+
+  if (!tbody) {
+    return;
+  }
+
+
+  tbody.innerHTML =
+    '';
+
+
+  if (
+    state.adminResults.length === 0
+  ) {
+
+    tbody.innerHTML =
+      '<tr>' +
+      '<td colspan="10" class="empty-state">' +
+      'Belum ada hasil ujian.' +
+      '</td>' +
+      '</tr>';
+
+    renderAdminPagination();
+
+    return;
+  }
+
+
+  const start =
+    (
+      state.currentAdminPage - 1
+    ) *
+    state.adminPageSize;
+
+
+  const end =
+    start +
+    state.adminPageSize;
+
+
+  const pageItems =
+    state.adminResults.slice(
+      start,
+      end
+    );
+
+
+  pageItems.forEach(
+    function(item, index) {
+
+      const tr =
+        document.createElement(
+          'tr'
+        );
+
+
+      tr.innerHTML =
+        '<td>' +
+        escapeHtml(
+          item.idUjian
+        ) +
+        '</td>' +
+
+        '<td>' +
+        escapeHtml(
+          item.nama
+        ) +
+        '</td>' +
+
+        '<td>' +
+        escapeHtml(
+          item.kelas
+        ) +
+        '</td>' +
+
+        '<td>' +
+        escapeHtml(
+          item.tanggal
+        ) +
+        '</td>' +
+
+        '<td>' +
+        escapeHtml(
+          item.totalSoal
+        ) +
+        '</td>' +
+
+        '<td class="correct-cell">' +
+        escapeHtml(
+          item.benar
+        ) +
+        '</td>' +
+
+        '<td class="wrong-cell">' +
+        escapeHtml(
+          item.salah
+        ) +
+        '</td>' +
+
+        '<td>' +
+        '<strong class="' +
+        getScoreClass(
+          item.nilai
+        ) +
+        '">' +
+        escapeHtml(
+          formatScore(
+            item.nilai
+          )
+        ) +
+        '</strong>' +
+        '</td>' +
+
+        '<td>' +
+        escapeHtml(
+          item.status
+        ) +
+        '</td>';
+
+
+      tbody.appendChild(
+        tr
+      );
+    }
+  );
+
+
+  renderAdminPagination();
+}
+
+
+/* ================================================================
+   ADMIN PAGINATION
+   ================================================================ */
+
+function renderAdminPagination() {
+
+  const container =
+    $('#adminPagination');
+
+  if (!container) {
+    return;
+  }
+
+
+  container.innerHTML =
+    '';
+
+
+  const totalPages =
+    Math.ceil(
+      state.adminResults.length /
+      state.adminPageSize
+    );
+
+
+  if (
+    totalPages <= 1
   ) {
     return;
   }
 
-  /*
-   * Jangan mengambil alih keyboard
-   * saat siswa sedang mengetik.
-   */
-  const tag =
-    document.activeElement?.tagName;
 
-  if (
-    tag === 'INPUT' ||
-    tag === 'TEXTAREA' ||
-    tag === 'SELECT'
+  const previous =
+    document.createElement(
+      'button'
+    );
+
+  previous.type =
+    'button';
+
+  previous.className =
+    'pagination-button';
+
+  previous.textContent =
+    '‹';
+
+  previous.disabled =
+    state.currentAdminPage <= 1;
+
+  previous.addEventListener(
+    'click',
+    function() {
+
+      if (
+        state.currentAdminPage > 1
+      ) {
+
+        state.currentAdminPage--;
+
+        renderAdminResults();
+      }
+    }
+  );
+
+
+  container.appendChild(
+    previous
+  );
+
+
+  for (
+    let page = 1;
+    page <= totalPages;
+    page++
   ) {
-    return;
-  }
 
-  if (event.key === 'ArrowLeft') {
-    goToQuestion(
-      state.currentQuestion - 1
+    const button =
+      document.createElement(
+        'button'
+      );
+
+    button.type =
+      'button';
+
+    button.className =
+      'pagination-button';
+
+    button.textContent =
+      page;
+
+
+    if (
+      page ===
+      state.currentAdminPage
+    ) {
+
+      button.classList.add(
+        'active'
+      );
+    }
+
+
+    button.addEventListener(
+      'click',
+      function() {
+
+        state.currentAdminPage =
+          page;
+
+        renderAdminResults();
+      }
+    );
+
+
+    container.appendChild(
+      button
     );
   }
 
-  if (event.key === 'ArrowRight') {
-    goToQuestion(
-      state.currentQuestion + 1
+
+  const next =
+    document.createElement(
+      'button'
+    );
+
+  next.type =
+    'button';
+
+  next.className =
+    'pagination-button';
+
+  next.textContent =
+    '›';
+
+  next.disabled =
+    state.currentAdminPage >=
+    totalPages;
+
+
+  next.addEventListener(
+    'click',
+    function() {
+
+      if (
+        state.currentAdminPage <
+        totalPages
+      ) {
+
+        state.currentAdminPage++;
+
+        renderAdminResults();
+      }
+    }
+  );
+
+
+  container.appendChild(
+    next
+  );
+}
+
+
+/* ================================================================
+   ADMIN COUNT
+   ================================================================ */
+
+function updateAdminResultCount() {
+
+  setText(
+    '#adminResultCount',
+    state.adminResults.length
+  );
+}
+
+
+/* ================================================================
+   ADMIN STATISTICS
+   ================================================================ */
+
+async function loadAdminStatistics() {
+
+  if (
+    !state.adminToken
+  ) {
+    return;
+  }
+
+
+  const params = {
+
+    token:
+      state.adminToken,
+
+    kelas:
+      getValue(
+        '#filterKelas'
+      ),
+
+    tanggal:
+      getValue(
+        '#filterTanggal'
+      ),
+
+    nama:
+      getValue(
+        '#filterNama'
+      ),
+
+    nilaiMin:
+      getValue(
+        '#filterNilaiMin'
+      ),
+
+    nilaiMax:
+      getValue(
+        '#filterNilaiMax'
+      )
+  };
+
+
+  try {
+
+    const data =
+      await apiGet(
+        'getStatistics',
+        params
+      );
+
+
+    if (
+      data &&
+      data.unauthorized
+    ) {
+
+      adminLogout();
+
+      return;
+    }
+
+
+    if (
+      !data ||
+      !data.success
+    ) {
+      return;
+    }
+
+
+    renderStatistics(
+      data.statistics
+    );
+
+
+  } catch (error) {
+
+    console.warn(
+      'Gagal memuat statistik:',
+      error
     );
   }
 }
 
 
 /* ================================================================
-   QUESTION TYPE
+   RENDER STATISTICS
    ================================================================ */
 
-function normalizeQuestionType(value) {
+function renderStatistics(
+  stats
+) {
+
+  if (!stats) {
+    return;
+  }
+
+
+  setText(
+    '#statTotalPeserta',
+    stats.totalPeserta || 0
+  );
+
+  setText(
+    '#statRataRata',
+    formatScore(
+      stats.rataRata || 0
+    )
+  );
+
+  setText(
+    '#statTertinggi',
+    formatScore(
+      stats.nilaiTertinggi || 0
+    )
+  );
+
+  setText(
+    '#statTerendah',
+    formatScore(
+      stats.nilaiTerendah || 0
+    )
+  );
+
+
+  if (
+    stats.kelas
+  ) {
+
+    Object.keys(
+      stats.kelas
+    ).forEach(
+      function(kelas) {
+
+        const safe =
+          kelas
+            .replace(
+              /\s+/g,
+              '_'
+            )
+            .replace(
+              /[^A-Za-z0-9_]/g,
+              ''
+            );
+
+        setText(
+          '#classCount_' +
+          safe,
+          stats.kelas[
+            kelas
+          ]
+        );
+      }
+    );
+  }
+}
+
+
+/* ================================================================
+   CLASS STATISTICS
+   ================================================================ */
+
+async function loadClassStatistics() {
+
+  if (
+    !state.adminToken
+  ) {
+    return;
+  }
+
+
+  const tanggal =
+    getValue(
+      '#filterTanggal'
+    );
+
+
+  try {
+
+    const data =
+      await apiGet(
+        'getClassStatistics',
+        {
+          token:
+            state.adminToken,
+
+          tanggal:
+            tanggal
+        }
+      );
+
+
+    if (
+      data &&
+      data.unauthorized
+    ) {
+
+      adminLogout();
+
+      return;
+    }
+
+
+    if (
+      !data ||
+      !data.success
+    ) {
+      return;
+    }
+
+
+    renderClassStatistics(
+      data.statistics
+    );
+
+
+  } catch (error) {
+
+    console.warn(
+      'Gagal memuat statistik kelas:',
+      error
+    );
+  }
+}
+
+
+/* ================================================================
+   RENDER CLASS STATISTICS
+   ================================================================ */
+
+function renderClassStatistics(
+  rows
+) {
+
+  const tbody =
+    $('#classStatisticsBody');
+
+  if (!tbody) {
+    return;
+  }
+
+
+  tbody.innerHTML =
+    '';
+
+
+  if (
+    !Array.isArray(rows) ||
+    rows.length === 0
+  ) {
+
+    tbody.innerHTML =
+      '<tr>' +
+      '<td colspan="5">' +
+      'Belum ada data.' +
+      '</td>' +
+      '</tr>';
+
+    return;
+  }
+
+
+  rows.forEach(
+    function(row) {
+
+      const tr =
+        document.createElement(
+          'tr'
+        );
+
+
+      tr.innerHTML =
+        '<td>' +
+        escapeHtml(
+          row.kelas
+        ) +
+        '</td>' +
+
+        '<td>' +
+        escapeHtml(
+          row.peserta
+        ) +
+        '</td>' +
+
+        '<td>' +
+        escapeHtml(
+          formatScore(
+            row.rataRata
+          )
+        ) +
+        '</td>' +
+
+        '<td>' +
+        escapeHtml(
+          formatScore(
+            row.tertinggi
+          )
+        ) +
+        '</td>' +
+
+        '<td>' +
+        escapeHtml(
+          formatScore(
+            row.terendah
+          )
+        ) +
+        '</td>';
+
+
+      tbody.appendChild(
+        tr
+      );
+    }
+  );
+}
+
+
+/* ================================================================
+   SEARCH EXAM RESULT
+   ================================================================ */
+
+async function searchExamResult() {
+
+  const input =
+    $('#searchExamId');
+
+  const id =
+    input
+      ? input.value.trim()
+      : '';
+
+
+  if (!id) {
+
+    showError(
+      'Masukkan ID ujian terlebih dahulu.'
+    );
+
+    return;
+  }
+
+
+  showLoading(
+    'Mencari hasil ujian...'
+  );
+
+
+  try {
+
+    const data =
+      await apiGet(
+        'getExamResult',
+        {
+          idUjian:
+            id
+        }
+      );
+
+
+    if (
+      !data ||
+      !data.success
+    ) {
+
+      throw new Error(
+        data &&
+        data.error
+          ? data.error
+          : 'Hasil ujian tidak ditemukan.'
+      );
+    }
+
+
+    showResultPage(
+      data.result,
+      false
+    );
+
+
+  } catch (error) {
+
+    showError(
+      getErrorMessage(error)
+    );
+
+  } finally {
+
+    hideLoading();
+  }
+}
+
+
+/* ================================================================
+   RESET ADMIN FILTER
+   ================================================================ */
+
+function resetAdminFilters() {
+
+  [
+    '#filterKelas',
+    '#filterTanggal',
+    '#filterNama',
+    '#filterNilaiMin',
+    '#filterNilaiMax'
+  ].forEach(
+    function(selector) {
+
+      const element =
+        $(selector);
+
+      if (!element) {
+        return;
+      }
+
+      element.value =
+        '';
+    }
+  );
+
+
+  loadAdminDashboard();
+
+  loadAdminStatistics();
+
+  loadClassStatistics();
+}
+
+
+/* ================================================================
+   GET EXAM RESULT
+   ================================================================ */
+
+async function loadExamResult(
+  examId
+) {
+
+  if (!examId) {
+    return;
+  }
+
+
+  showLoading(
+    'Memuat hasil ujian...'
+  );
+
+
+  try {
+
+    const data =
+      await apiGet(
+        'getExamResult',
+        {
+          idUjian:
+            examId
+        }
+      );
+
+
+    if (
+      !data ||
+      !data.success
+    ) {
+
+      throw new Error(
+        data &&
+        data.error
+          ? data.error
+          : 'Hasil ujian tidak ditemukan.'
+      );
+    }
+
+
+    showResultPage(
+      data.result,
+      false
+    );
+
+
+  } catch (error) {
+
+    showError(
+      getErrorMessage(error)
+    );
+
+  } finally {
+
+    hideLoading();
+  }
+}
+
+
+/* ================================================================
+   PAGE NAVIGATION
+   ================================================================ */
+
+function showPage(
+  pageId
+) {
+
+  $$('.app-page')
+    .forEach(
+      function(page) {
+
+        page.classList.remove(
+          'active'
+        );
+
+        page.style.display =
+          'none';
+      }
+    );
+
+
+  const page =
+    $('#' + pageId);
+
+  if (!page) {
+    return;
+  }
+
+
+  page.classList.add(
+    'active'
+  );
+
+  page.style.display =
+    'block';
+
+
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  });
+
+
+  clearMessages();
+}
+
+
+/* ================================================================
+   MODAL
+   ================================================================ */
+
+function showConfirmModal(
+  title,
+  message,
+  callback
+) {
+
+  const overlay =
+    $('#modalOverlay');
+
+  const titleElement =
+    $('#modalTitle');
+
+  const messageElement =
+    $('#modalMessage');
+
+  const confirmButton =
+    $('#btnModalConfirm');
+
+
+  if (
+    !overlay ||
+    !titleElement ||
+    !messageElement ||
+    !confirmButton
+  ) {
+
+    if (
+      window.confirm(
+        stripHtml(message)
+      )
+    ) {
+      callback();
+    }
+
+    return;
+  }
+
+
+  titleElement.textContent =
+    title;
+
+  messageElement.innerHTML =
+    message;
+
+
+  confirmButton.onclick =
+    function() {
+
+      closeModal();
+
+      callback();
+    };
+
+
+  overlay.classList.add(
+    'show'
+  );
+}
+
+
+function showAlertModal(
+  title,
+  message,
+  callback
+) {
+
+  const overlay =
+    $('#modalOverlay');
+
+  const titleElement =
+    $('#modalTitle');
+
+  const messageElement =
+    $('#modalMessage');
+
+  const confirmButton =
+    $('#btnModalConfirm');
+
+
+  if (
+    !overlay ||
+    !titleElement ||
+    !messageElement ||
+    !confirmButton
+  ) {
+
+    alert(
+      stripHtml(message)
+    );
+
+    if (callback) {
+      callback();
+    }
+
+    return;
+  }
+
+
+  titleElement.textContent =
+    title;
+
+  messageElement.innerHTML =
+    message;
+
+
+  confirmButton.textContent =
+    'OK';
+
+
+  confirmButton.onclick =
+    function() {
+
+      closeModal();
+
+      if (callback) {
+        callback();
+      }
+    };
+
+
+  overlay.classList.add(
+    'show'
+  );
+}
+
+
+function closeModal() {
+
+  const overlay =
+    $('#modalOverlay');
+
+  if (!overlay) {
+    return;
+  }
+
+  overlay.classList.remove(
+    'show'
+  );
+
+
+  const confirmButton =
+    $('#btnModalConfirm');
+
+  if (confirmButton) {
+
+    confirmButton.textContent =
+      'Ya, Kirim';
+  }
+}
+
+
+/* ================================================================
+   LOADING
+   ================================================================ */
+
+function showLoading(
+  message
+) {
+
+  const overlay =
+    $('#loadingOverlay');
+
+  const text =
+    $('#loadingText');
+
+
+  if (text) {
+
+    text.textContent =
+      message ||
+      'Memuat...';
+  }
+
+
+  if (overlay) {
+
+    overlay.classList.add(
+      'show'
+    );
+  }
+}
+
+
+function hideLoading() {
+
+  const overlay =
+    $('#loadingOverlay');
+
+  if (overlay) {
+
+    overlay.classList.remove(
+      'show'
+    );
+  }
+}
+
+
+/* ================================================================
+   ADMIN TABLE LOADING
+   ================================================================ */
+
+function showAdminTableLoading() {
+
+  const tbody =
+    $('#adminResultsBody');
+
+  if (!tbody) {
+    return;
+  }
+
+
+  tbody.innerHTML =
+    '<tr>' +
+    '<td colspan="10" class="loading-cell">' +
+    '⏳ Memuat data...' +
+    '</td>' +
+    '</tr>';
+}
+
+
+function hideAdminTableLoading() {
+  /* Tidak diperlukan. */
+}
+
+
+/* ================================================================
+   ERROR / MESSAGE
+   ================================================================ */
+
+function showError(
+  message
+) {
+
+  const element =
+    $('#errorMessage');
+
+  if (!element) {
+
+    alert(
+      message
+    );
+
+    return;
+  }
+
+
+  element.textContent =
+    message || 'Terjadi kesalahan.';
+
+
+  element.classList.add(
+    'show'
+  );
+
+
+  setTimeout(
+    function() {
+
+      element.classList.remove(
+        'show'
+      );
+
+    },
+    6000
+  );
+}
+
+
+function clearMessages() {
+
+  const element =
+    $('#errorMessage');
+
+  if (element) {
+
+    element.textContent =
+      '';
+
+    element.classList.remove(
+      'show'
+    );
+  }
+}
+
+
+/* ================================================================
+   DATE
+   ================================================================ */
+
+function setTodayDate() {
+
+  const input =
+    $('#examDateInput');
+
+  if (!input) {
+    return;
+  }
+
+
+  const now =
+    new Date();
+
+
+  const year =
+    now.getFullYear();
+
+
+  const month =
+    String(
+      now.getMonth() + 1
+    ).padStart(
+      2,
+      '0'
+    );
+
+
+  const day =
+    String(
+      now.getDate()
+    ).padStart(
+      2,
+      '0'
+    );
+
+
+  input.value =
+    year +
+    '-' +
+    month +
+    '-' +
+    day;
+}
+
+
+function getTodayIndonesianDate() {
+
+  const now =
+    new Date();
+
+
+  const day =
+    String(
+      now.getDate()
+    ).padStart(
+      2,
+      '0'
+    );
+
+
+  const month =
+    String(
+      now.getMonth() + 1
+    ).padStart(
+      2,
+      '0'
+    );
+
+
+  const year =
+    now.getFullYear();
+
+
+  return (
+    day +
+    '-' +
+    month +
+    '-' +
+    year
+  );
+}
+
+
+/* ================================================================
+   FORMAT QUESTION TYPE
+   ================================================================ */
+
+function normalizeQuestionType(
+  value
+) {
+
   const text =
     String(
       value || ''
     )
-    .trim()
-    .toUpperCase();
+      .trim()
+      .toUpperCase();
+
 
   if (
     text === 'PG' ||
@@ -2710,227 +3937,125 @@ function normalizeQuestionType(value) {
     return 'PG';
   }
 
+
   if (
     text === 'PGK' ||
-    text === 'PILIHAN GANDA KOMPLEKS'
+    text ===
+      'PILIHAN GANDA KOMPLEKS'
   ) {
     return 'PGK';
   }
 
+
   if (
     text === 'B/S' ||
     text === 'BS' ||
-    text === 'BENAR/SALAH' ||
-    text === 'BENAR SALAH'
+    text ===
+      'BENAR/SALAH' ||
+    text ===
+      'BENAR SALAH'
   ) {
     return 'B/S';
   }
+
 
   return text;
 }
 
 
-function getQuestionTypeLabel(type) {
+function getQuestionTypeLabel(
+  type
+) {
+
   const normalized =
-    normalizeQuestionType(type);
+    normalizeQuestionType(
+      type
+    );
 
-  if (normalized === 'PG') {
-    return 'Pilihan Ganda';
+
+  if (
+    normalized === 'PG'
+  ) {
+    return 'PILIHAN GANDA';
   }
 
-  if (normalized === 'PGK') {
-    return 'Pilihan Ganda Kompleks';
+
+  if (
+    normalized === 'PGK'
+  ) {
+    return 'PILIHAN GANDA KOMPLEKS';
   }
 
-  if (normalized === 'B/S') {
-    return 'Benar / Salah';
+
+  if (
+    normalized === 'B/S'
+  ) {
+    return 'BENAR / SALAH';
   }
+
 
   return normalized;
 }
 
 
 /* ================================================================
-   LOADING
+   FORMAT TEXT
    ================================================================ */
 
-function setLoading(
-  visible,
-  message
+function formatText(
+  text
 ) {
-  state.loading =
-    visible;
 
-  if (!DOM.loadingOverlay) {
-    return;
+  if (
+    text === null ||
+    text === undefined
+  ) {
+    return '';
   }
 
-  if (message) {
-    const text =
-      DOM.loadingOverlay.querySelector(
-        '.loading-text'
-      );
 
-    if (text) {
-      text.textContent =
-        message;
-    }
-  }
+  const value =
+    String(text);
 
-  DOM.loadingOverlay.classList.toggle(
-    'show',
-    visible
-  );
+
+  /*
+   * Escape HTML terlebih dahulu.
+   */
+  let safe =
+    escapeHtml(value);
+
+
+  /*
+   * Baris baru.
+   */
+  safe =
+    safe.replace(
+      /\r?\n/g,
+      '<br>'
+    );
+
+
+  return safe;
 }
 
 
 /* ================================================================
-   TOAST
+   ESCAPE HTML
    ================================================================ */
 
-function showToast(
-  message,
-  type = 'info'
+function escapeHtml(
+  value
 ) {
-  if (!DOM.toastContainer) {
-    alert(message);
-    return;
+
+  if (
+    value === null ||
+    value === undefined
+  ) {
+    return '';
   }
 
-  const toast =
-    document.createElement('div');
 
-  toast.className =
-    'toast toast-' + type;
-
-  const icon =
-    document.createElement('span');
-
-  icon.className =
-    'toast-icon';
-
-  icon.textContent =
-    getToastIcon(type);
-
-  const text =
-    document.createElement('span');
-
-  text.className =
-    'toast-text';
-
-  text.textContent =
-    message;
-
-  const close =
-    document.createElement('button');
-
-  close.type = 'button';
-  close.className =
-    'toast-close';
-
-  close.textContent =
-    '×';
-
-  close.addEventListener(
-    'click',
-    function() {
-      toast.remove();
-    }
-  );
-
-  toast.appendChild(icon);
-  toast.appendChild(text);
-  toast.appendChild(close);
-
-  DOM.toastContainer.appendChild(
-    toast
-  );
-
-  requestAnimationFrame(
-    function() {
-      toast.classList.add(
-        'show'
-      );
-    }
-  );
-
-  setTimeout(
-    function() {
-      toast.classList.remove(
-        'show'
-      );
-
-      setTimeout(
-        function() {
-          toast.remove();
-        },
-        300
-      );
-    },
-    4500
-  );
-}
-
-
-function getToastIcon(type) {
-  const icons = {
-    success: '✓',
-    error: '!',
-    warning: '⚠',
-    info: 'i'
-  };
-
-  return icons[type] ||
-    icons.info;
-}
-
-
-/* ================================================================
-   FORMATTING
-   ================================================================ */
-
-function formatScore(value) {
-  const number =
-    Number(value);
-
-  if (isNaN(number)) {
-    return '0';
-  }
-
-  return Number.isInteger(number)
-    ? String(number)
-    : number.toFixed(2);
-}
-
-
-function getScoreClass(value) {
-  const score =
-    Number(value) || 0;
-
-  if (score >= 90) {
-    return 'score-excellent';
-  }
-
-  if (score >= 80) {
-    return 'score-good';
-  }
-
-  if (score >= 70) {
-    return 'score-medium';
-  }
-
-  return 'score-low';
-}
-
-
-/* ================================================================
-   HTML SECURITY
-   ================================================================ */
-
-function escapeHTML(value) {
-  return String(
-    value ?? ''
-  )
+  return String(value)
     .replace(
       /&/g,
       '&amp;'
@@ -2955,18 +4080,224 @@ function escapeHTML(value) {
 
 
 /* ================================================================
-   PUBLIC HELPERS
+   STRIP HTML
+   ================================================================ */
+
+function stripHtml(
+  value
+) {
+
+  const element =
+    document.createElement(
+      'div'
+    );
+
+  element.innerHTML =
+    value || '';
+
+  return element.textContent ||
+    element.innerText ||
+    '';
+}
+
+
+/* ================================================================
+   SCORE
+   ================================================================ */
+
+function formatScore(
+  value
+) {
+
+  const number =
+    Number(value);
+
+
+  if (
+    !Number.isFinite(
+      number
+    )
+  ) {
+    return '0';
+  }
+
+
+  return number
+    .toFixed(2)
+    .replace(
+      /\.00$/,
+      ''
+    );
+}
+
+
+function getScoreClass(
+  value
+) {
+
+  const score =
+    Number(value) || 0;
+
+
+  if (
+    score >= 90
+  ) {
+    return 'score-excellent';
+  }
+
+
+  if (
+    score >= 80
+  ) {
+    return 'score-good';
+  }
+
+
+  if (
+    score >= 70
+  ) {
+    return 'score-fair';
+  }
+
+
+  return 'score-low';
+}
+
+
+/* ================================================================
+   DOM TEXT
+   ================================================================ */
+
+function setText(
+  selector,
+  value
+) {
+
+  const element =
+    $(selector);
+
+  if (!element) {
+    return;
+  }
+
+
+  element.textContent =
+    value === undefined ||
+    value === null
+      ? ''
+      : value;
+}
+
+
+/* ================================================================
+   GET VALUE
+   ================================================================ */
+
+function getValue(
+  selector
+) {
+
+  const element =
+    $(selector);
+
+  if (!element) {
+    return '';
+  }
+
+
+  return String(
+    element.value || ''
+  ).trim();
+}
+
+
+/* ================================================================
+   ERROR MESSAGE
+   ================================================================ */
+
+function getErrorMessage(
+  error
+) {
+
+  if (!error) {
+    return 'Terjadi kesalahan.';
+  }
+
+
+  if (
+    error.message
+  ) {
+    return String(
+      error.message
+    );
+  }
+
+
+  return String(error);
+}
+
+
+/* ================================================================
+   SCROLL
+   ================================================================ */
+
+function scrollExamToTop() {
+
+  const examCard =
+    $('#examQuestionCard');
+
+  if (examCard) {
+
+    examCard.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
+
+    return;
+  }
+
+
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  });
+}
+
+
+/* ================================================================
+   DEBUG HELPER
    ================================================================ */
 
 window.UjianApp = {
+
   state: state,
 
-  showView: showView,
+  startExam:
+    startExam,
 
-  loadQuestions: loadQuestions,
+  submitExam:
+    submitExam,
 
-  checkApi: checkApi,
+  loadQuestions:
+    loadQuestions,
 
-  logoutAdmin: logoutAdmin
+  adminLogin:
+    adminLogin,
+
+  adminLogout:
+    adminLogout,
+
+  loadAdminDashboard:
+    loadAdminDashboard,
+
+  loadAdminStatistics:
+    loadAdminStatistics,
+
+  loadClassStatistics:
+    loadClassStatistics,
+
+  pingServer:
+    pingServer
+
 };
 ```
